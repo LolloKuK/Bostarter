@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BOSTARTER - Login & Registrazione</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    function toggleForm(tab) {
+      document.getElementById('login-form').classList.toggle('hidden', tab !== 'login');
+      document.getElementById('register-form').classList.toggle('hidden', tab !== 'register');
+      document.getElementById('tab-login').classList.toggle('border-b-2', tab === 'login');
+      document.getElementById('tab-register').classList.toggle('border-b-2', tab === 'register');
+    }
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- Navbar semplice -->
+  <nav class="bg-white shadow p-4 flex justify-between items-center">
+    <h1 class="text-2xl font-bold text-blue-600"><a href="index.html">BOSTARTER</a></h1>
+    <a href="index.html" class="text-blue-500 hover:underline">← Torna alla home</a>
+  </nav>
+
+  <!-- Tabs -->
+  <div class="max-w-md mx-auto mt-10 bg-white p-6 rounded shadow">
+    <div class="flex justify-around mb-6 text-blue-600 font-semibold cursor-pointer">
+      <div id="tab-login" onclick="toggleForm('login')" class="pb-2 border-b-2">Login</div>
+      <div id="tab-register" onclick="toggleForm('register')" class="pb-2">Registrazione</div>
+    </div>
+
+    <!-- Form Login -->
+    <form id="login-form" class="space-y-4">
+      <input type="email" placeholder="Email" required class="w-full border border-gray-300 px-4 py-2 rounded" />
+      <input type="password" placeholder="Password" required class="w-full border border-gray-300 px-4 py-2 rounded" />
+      <button type="submit" class="bg-blue-600 text-white w-full py-2 rounded hover:bg-blue-700">Accedi</button>
+    </form>
+
+    <!-- Form Registrazione -->
+    <form id="register-form" class="space-y-4 hidden mt-4">
+      <input type="text" placeholder="Nickname" required class="w-full border border-gray-300 px-4 py-2 rounded" />
+      <input type="email" placeholder="Email" required class="w-full border border-gray-300 px-4 py-2 rounded" />
+      <input type="password" placeholder="Password" required class="w-full border border-gray-300 px-4 py-2 rounded" />
+      <input type="text" placeholder="Nome" required class="w-full border border-gray-300 px-4 py-2 rounded" />
+      <input type="text" placeholder="Cognome" required class="w-full border border-gray-300 px-4 py-2 rounded" />
+      <input type="number" placeholder="Anno di nascita" required class="w-full border border-gray-300 px-4 py-2 rounded" />
+      <input type="text" placeholder="Luogo di nascita" required class="w-full border border-gray-300 px-4 py-2 rounded" />
+      
+      <!-- Skill utente (es. AI, 3) -->
+      <textarea placeholder="Skill (es: AI,3; Web,5)" class="w-full border border-gray-300 px-4 py-2 rounded" rows="2"></textarea>
+      
+      <!-- Checkbox ruoli -->
+      <div class="flex items-center space-x-4">
+        <label><input type="checkbox" /> Creatore</label>
+        <label><input type="checkbox" /> Amministratore</label>
+      </div>
+
+      <!-- Campo codice sicurezza per admin -->
+      <input type="text" placeholder="Codice sicurezza (solo admin)" class="w-full border border-gray-300 px-4 py-2 rounded" />
+
+      <button type="submit" class="bg-green-600 text-white w-full py-2 rounded hover:bg-green-700">Registrati</button>
+    </form>
+  </div>
+
+</body>
+</html>
