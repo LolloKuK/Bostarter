@@ -13,10 +13,10 @@
 
   <!-- NAVBAR -->
   <nav class="bg-white shadow p-4 flex justify-between items-center">
-    <h1 class="text-2xl font-bold text-blue-600"><a href="index.html">BOSTARTER</a></h1>
+    <h1 class="text-2xl font-bold text-blue-600"><a href="index.php">BOSTARTER</a></h1>
     <div class="space-x-4">
-      <a href="authentication.html" class="text-blue-500 hover:underline">Login</a>
-      <a href="dashboard.html" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Dashboard</a>
+      <a href="authentication.php" class="text-blue-500 hover:underline">Login</a>
+      <a href="dashboard.php" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Dashboard</a>
     </div>
   </nav>
 
@@ -47,7 +47,7 @@
       </div>
 
       <!-- Link alla pagina di dettaglio del progetto -->
-      <a href="dettaglio_progetto.html" class="text-blue-500 hover:underline">Vedi dettagli →</a>
+      <a href="project_details.php" class="text-blue-500 hover:underline">Vedi dettagli →</a>
     </div>
 
     <!-- Puoi copiare/incollare altri blocchi di <div> come questo per mostrare più progetti -->

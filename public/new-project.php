@@ -17,8 +17,8 @@
 
   <!-- Navbar -->
   <nav class="bg-white shadow p-4 flex justify-between items-center">
-    <h1 class="text-2xl font-bold text-blue-600"><a href="index.html">BOSTARTER</a></h1>
-    <a href="dashboard_creatore.html" class="text-blue-500 hover:underline">Dashboard</a>
+    <h1 class="text-2xl font-bold text-blue-600"><a href="index.php">BOSTARTER</a></h1>
+    <a href="dashboard.php" class="text-blue-500 hover:underline">Dashboard</a>
   </nav>
 
   <!-- Form creazione progetto -->

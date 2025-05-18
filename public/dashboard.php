@@ -10,8 +10,8 @@
 
   <!-- Navbar -->
   <nav class="bg-white shadow p-4 flex justify-between items-center">
-    <h1 class="text-2xl font-bold text-blue-600"><a href="index.html">BOSTARTER</a></h1>
-    <a href="login.html" class="text-blue-500 hover:underline">Login</a>
+    <h1 class="text-2xl font-bold text-blue-600"><a href="index.php">BOSTARTER</a></h1>
+    <a href="login.php" class="text-blue-500 hover:underline">Login</a>
   </nav>
 
   <!-- Dashboard contenuto -->
@@ -20,7 +20,7 @@
 
     <!-- Bottone per aggiungere nuovo progetto -->
     <div class="mb-6">
-      <a href="nuovo_progetto.html" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+      <a href="new_project.php" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
         + Crea nuovo progetto
       </a>
     </div>
@@ -34,7 +34,7 @@
         <p class="text-sm text-gray-500">Budget: €2.000 — Stato: <span class="font-semibold text-green-600">Aperto</span></p>
         <p class="text-sm text-gray-500">Data limite: 30/06/2025</p>
         <div class="mt-4 flex justify-between">
-          <a href="dettaglio_progetto.html" class="text-blue-600 hover:underline">Vedi dettagli</a>
+          <a href="project_details.php" class="text-blue-600 hover:underline">Vedi dettagli</a>
           <a href="#" class="text-red-500 hover:underline">Chiudi progetto</a>
         </div>
       </div>
@@ -46,7 +46,7 @@
         <p class="text-sm text-gray-500">Budget: €5.000 — Stato: <span class="font-semibold text-red-600">Chiuso</span></p>
         <p class="text-sm text-gray-500">Data limite: 10/03/2025</p>
         <div class="mt-4 flex justify-between">
-          <a href="dettaglio_progetto.html" class="text-blue-600 hover:underline">Vedi dettagli</a>
+          <a href="project_details.php" class="text-blue-600 hover:underline">Vedi dettagli</a>
           <span class="text-gray-400">Chiuso</span>
         </div>
       </div>
