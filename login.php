@@ -162,33 +162,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
       <label class="form-label">Luogo di nascita</label>
       <input type="text" name="register_luogo" class="form-control" required>
     </div>
-    <div class="mb-3">
-      <label class="form-label">Skill</label>
-      <select name="register_skill" class="form-select" required>
-        <option value="">Seleziona una skill</option>
-        <option value="AI">Sql</option>
-        <option value="Web">Java</option>
-        <option value="IoT">Js</option>
-        <option value="Cyber">Web Dev.</option>
-        <option value="Data">Maintenance Hw</option>
-        <option value="Data">Hw design</option>
-        <option value="Data">Data analysis</option>
-        <option value="Data">Leadership</option>
-        <option value="Data">Teamwork</option>
-      </select>
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Livello (0-5)</label>
-      <select name="register_livello" class="form-select" required>
-        <option value="">Seleziona un livello</option>
-        <option value="1">0</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-      </select>
-    </div>
     <button type="submit" name="register" class="btn btn-success w-100">Registrati</button>
   </form>
 </div>

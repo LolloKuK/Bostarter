@@ -11,6 +11,5 @@
   <nav class="navbar navbar-light bg-light px-4 shadow-sm">
     <a class="navbar-brand fw-bold text-primary" href="home.php">BOSTARTER</a>
   </nav>
-
 </body>
 </html>

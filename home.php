@@ -46,6 +46,7 @@ if ($result) {
       <form method="POST" class="d-inline me-2 align-self-center">
         <button type="submit" name="logout" class="btn btn-link text-decoration-underline py-1 px-0 align-baseline">Esci</button>
       </form>
+      <a href="insert-skill.php" class="btn btn-outline-primary me-2">Skill</a>
       <a href="new-project.php" class="btn btn-success me-2">Crea</a>
       <a href="admin.php" class="btn btn-outline-primary">Dashboard</a>
     <?php else: ?>
