@@ -13,6 +13,8 @@ CREATE TABLE Utente(
     Cognome VARCHAR(20),
     LuogoNascita VARCHAR(20),
     AnnoNascita INT,
+    Competenza VARCHAR (10),
+    Livello INT
     );
 
 CREATE TABLE Creatore(
@@ -29,7 +31,7 @@ CREATE TABLE Amministratore(
     );
 
 CREATE TABLE Competenza(
-    Nome VARCHAR(20) PRIMARY KEY,
+    Nome VARCHAR(20) PRIMARY KEY
     );
 
 CREATE TABLE Progetto(
@@ -70,7 +72,7 @@ CREATE TABLE Commento(
     
 CREATE TABLE Risposta(
 	Id INT auto_increment PRIMARY KEY,
-    IdCommento INT
+    IdCommento INT,
     EmailUtente VARCHAR(20),
     foreign key (EmailUtente) references Utente(Email)
     );
@@ -81,7 +83,7 @@ CREATE TABLE ProgSoftware(
     );
     
 CREATE TABLE ProgHardware(
-	NomeProgettoHardware varchar(20) primary key,
+	NomeProgettoHardware VARCHAR(20) PRIMARY KEY,
 	foreign key (NomeProgettoHardware) references Progetto(Nome)
     );
     
@@ -109,7 +111,7 @@ CREATE TABLE Finanziamento(
     CodiceReward int,
     FOREIGN KEY (EmailUtente) REFERENCES Utente(Email),
     FOREIGN KEY (NomeProgetto) REFERENCES Progetto(Nome),
-    FOREIGN KEY (CodiceReward) REFERENCES Reward(Codice)
+    FOREIGN KEY (CodiceReward) REFERENCES Reward(Id)
 	);
     
 CREATE TABLE Profilo (
@@ -137,19 +139,17 @@ operazioni che riguardano tutti gli utenti*/
 /*registrazione utente*/
 DELIMITER //
 CREATE PROCEDURE sp_registra_utente (
-	IN p_email VARCHAR(50),
+	IN p_username VARCHAR(20),
+    IN p_email VARCHAR(50),
+    IN p_password VARCHAR(20),
     IN p_nome VARCHAR(20),
     IN p_cognome VARCHAR(20),
-    IN p_username VARCHAR(20),
-    IN p_password VARCHAR(20),
     IN p_annoNascita INT,
-    IN p_luogoNascita VARCHAR(20),
-    IN p_competenza VARCHAR(20),
-    IN p_livello INT
+    IN p_luogoNascita VARCHAR(20)
 )
 BEGIN
-	INSERT INTO Utente (Email, Nome, Cognome, Username, Password, AnnoNascita, LuogoNascita, Competenza, Livello)
-    VALUES (p_email, p_nome, p_cognome, p_username, p_password, p_annoNascita, p_luogoNascita, p_competenza, p_livello);
+	INSERT INTO Utente (Username, Email, Password, Nome, Cognome, AnnoNascita, LuogoNascita)
+    VALUES (p_username, p_email, p_password, p_nome, p_cognome, p_annoNascita, p_luogoNascita);
 END //
 DELIMITER ;
 
@@ -166,6 +166,21 @@ BEGIN
 END //
 DELIMITER ;
 
+/*inserimento skill di curriculum*/
+DELIMITER //
+CREATE PROCEDURE sp_aggiungi_skill (
+    IN p_email VARCHAR(50),
+    IN p_competenza VARCHAR(5),
+    IN p_livello INT
+)
+BEGIN
+	UPDATE Utente
+    SET Competenza = p_competenza,
+        Livello = p_livello
+    WHERE Email = p_email;
+END //
+DELIMITER ;
+
 /*visualizzazione progetto disponibili (aperti)*/
 DELIMITER //
 CREATE PROCEDURE sp_visualizza_progetti_aperti()
@@ -175,7 +190,7 @@ BEGIN
 END //
 DELIMITER ;
 
-#finanziamento progetto aperto
+/*finanziamento progetto aperto*/
 DELIMITER //
 CREATE PROCEDURE finanzia_progetto (
     IN p_id_utente INT,
@@ -229,7 +244,7 @@ BEGIN
 END //
 DELIMITER ;
 
-#inserimento candidatura
+/*inserimento candidatura*/
 DELIMITER //
 CREATE PROCEDURE sp_inserisci_candidatura (
 	IN p_email_utente VARCHAR(50),
