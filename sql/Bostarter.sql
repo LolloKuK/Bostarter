@@ -12,9 +12,26 @@ CREATE TABLE Utente(
     Nome VARCHAR(20),
     Cognome VARCHAR(20),
     LuogoNascita VARCHAR(20),
-    AnnoNascita INT,
-    Competenza VARCHAR (10),
-    Livello INT
+    AnnoNascita INT
+    );
+
+CREATE TABLE Competenza(
+    Nome VARCHAR(20) PRIMARY KEY
+    );
+
+CREATE TABLE SkillUtente (
+    EmailUtente VARCHAR(50),
+    Nome VARCHAR(20),
+    Livello INT,
+    PRIMARY KEY (EmailUtente, Nome),
+    FOREIGN KEY (EmailUtente) REFERENCES Utente(Email),
+    FOREIGN KEY (Nome) REFERENCES Competenza(Nome)
+);
+
+CREATE TABLE Amministratore(
+	EmailUtenteAmministratore VARCHAR(20) PRIMARY KEY,
+    CodiceSicurezza INT,
+    foreign key (EmailUtenteAmministratore) references Utente(Email)
     );
 
 CREATE TABLE Creatore(
@@ -22,16 +39,6 @@ CREATE TABLE Creatore(
     NrProgetti INT,
     Affidabilità INT DEFAULT 0,
 	foreign key (EmailUtenteCreatore) references Utente(Email)
-    );
-    
-CREATE TABLE Amministratore(
-	EmailUtenteAmministratore VARCHAR(20) PRIMARY KEY,
-    CodiceSicurezza INT,
-    foreign key (EmailUtenteAmministratore) references Utente(Email)
-    );
-
-CREATE TABLE Competenza(
-    Nome VARCHAR(20) PRIMARY KEY
     );
 
 CREATE TABLE Progetto(
@@ -133,8 +140,9 @@ CREATE TABLE Reclutamento (
 /*-----------------------------------------------------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------------------------------*/
-/*OPERAZIONI SUI DATI
-operazioni che riguardano tutti gli utenti*/
+/*OPERAZIONI SUI DATI*/
+
+/*login.php*/
 
 /*registrazione utente*/
 DELIMITER //
@@ -166,20 +174,26 @@ BEGIN
 END //
 DELIMITER ;
 
-/*inserimento skill di curriculum*/
+/*autenticazione amministratore*/
 DELIMITER //
-CREATE PROCEDURE sp_aggiungi_skill (
+CREATE PROCEDURE sp_autentica_amministratore (
     IN p_email VARCHAR(50),
-    IN p_competenza VARCHAR(5),
-    IN p_livello INT
+    IN p_password VARCHAR(20),
+    IN p_codice_sicurezza INT
 )
 BEGIN
-	UPDATE Utente
-    SET Competenza = p_competenza,
-        Livello = p_livello
-    WHERE Email = p_email;
+    SELECT u.Email, u.Nome, u.Cognome
+    FROM Utente u
+    JOIN Amministratore a ON u.Email = a.EmailUtenteAmministratore
+    WHERE u.Email = p_email
+      AND u.Password = p_password
+      AND a.CodiceSicurezza = p_codice_sicurezza;
 END //
 DELIMITER ;
+
+/*-----------------------------------------------------------------------------------------------------*/
+
+/*home.php*/
 
 /*visualizzazione progetto disponibili (aperti)*/
 DELIMITER //
@@ -189,6 +203,38 @@ BEGIN
     WHERE Stato = 'aperto';
 END //
 DELIMITER ;
+
+/*-----------------------------------------------------------------------------------------------------*/
+
+/*insert-skill.php*/
+
+/*Inserisci skill nel curriculum*/
+DELIMITER //
+CREATE PROCEDURE sp_aggiungi_o_modifica_skill(
+    IN p_email VARCHAR(50),
+    IN p_nome_competenza VARCHAR(20),
+    IN p_livello INT
+)
+BEGIN
+    -- Se esiste già la skill, la aggiorno
+    IF EXISTS (
+        SELECT 1 FROM SkillUtente 
+        WHERE EmailUtente = p_email AND Nome = p_nome_competenza
+    ) THEN
+        UPDATE SkillUtente
+        SET Livello = p_livello
+        WHERE EmailUtente = p_email AND Nome = p_nome_competenza;
+    ELSE
+        -- Altrimenti la inserisco
+        INSERT INTO SkillUtente (EmailUtente, Nome, Livello)
+        VALUES (p_email, p_nome_competenza, p_livello);
+    END IF;
+END //
+DELIMITER ;
+
+/*-----------------------------------------------------------------------------------------------------*/
+
+/*project-info.php*/
 
 /*finanziamento progetto aperto*/
 DELIMITER //
@@ -244,6 +290,18 @@ BEGIN
 END //
 DELIMITER ;
 
+/*inserimento risposta ad un commento*/
+DELIMITER //
+CREATE PROCEDURE sp_rispondi_a_commento (
+    IN p_id_commento INT,
+    IN p_email_creatore VARCHAR(50)
+)
+BEGIN
+    INSERT INTO Risposta(Id, EmailUtente)
+    VALUES (p_id_commento, p_email_creatore);
+END //
+DELIMITER ;
+
 /*inserimento candidatura*/
 DELIMITER //
 CREATE PROCEDURE sp_inserisci_candidatura (
@@ -258,42 +316,28 @@ END //
 DELIMITER ;
 
 /*-----------------------------------------------------------------------------------------------------*/
-/*operazioni che riguardano solo amministratori*/
 
-/*inserimento nuova stringa*/
+/*admin.php*/
+
+/*inserimento nuova competenza*/
 DELIMITER //
-CREATE PROCEDURE sp_aggiungi_o_modifica_skill (
-    IN p_email VARCHAR(50),
-    IN p_competenza VARCHAR(5),
-    IN p_livello INT
-)
+CREATE PROCEDURE sp_aggiungi_competenza(IN p_nome VARCHAR(20))
 BEGIN
-    UPDATE Utente
-    SET Competenza = p_competenza,
-        Livello = p_livello
-    WHERE Email = p_email;
+    INSERT INTO Competenza (Nome) VALUES (p_nome);
 END //
 DELIMITER ;
 
-/*autenticazione amministratore*/
+/*eliminazione competenza*/
 DELIMITER //
-CREATE PROCEDURE sp_autentica_amministratore (
-    IN p_email VARCHAR(50),
-    IN p_password VARCHAR(20),
-    IN p_codice_sicurezza INT
-)
+CREATE PROCEDURE sp_elimina_competenza(IN p_nome VARCHAR(20))
 BEGIN
-    SELECT u.Email, u.Nome, u.Cognome
-    FROM Utente u
-    JOIN Amministratore a ON u.Email = a.EmailUtenteAmministratore
-    WHERE u.Email = p_email
-      AND u.Password = p_password
-      AND a.CodiceSicurezza = p_codice_sicurezza;
+    DELETE FROM Competenza WHERE Nome = p_nome;
 END //
 DELIMITER ;
 
 /*-----------------------------------------------------------------------------------------------------*/
-/*operazioni che riguardano solo i creatori*/
+
+/*new-project.php*/
 
 /*inserimento nuovo progetto*/
 DELIMITER //
@@ -333,17 +377,7 @@ BEGIN
 END //
 DELIMITER ;
 
-/*inserimento risposta ad un commento*/
-DELIMITER //
-CREATE PROCEDURE sp_rispondi_a_commento (
-    IN p_id_commento INT,
-    IN p_email_creatore VARCHAR(50)
-)
-BEGIN
-    INSERT INTO Risposta(Id, EmailUtente)
-    VALUES (p_id_commento, p_email_creatore);
-END //
-DELIMITER ;
+/**/
 
 /*inserimento di un profilo (solo per progetto software)*/
 DELIMITER //
@@ -378,7 +412,7 @@ DELIMITER ;
 /*-----------------------------------------------------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------------------------------*/
-/*STATISTICHE (IMPLEMENTATE TRAMITE VISTE)*/
+/*STATISTICHE*/
 
 -- Classifica TOP 3 creatori per affidabilità
 CREATE OR REPLACE VIEW v_top_creatori AS
@@ -526,6 +560,7 @@ END //
 DELIMITER ;
 /*-----------------------------------------------------------------------------------------------------*/
 
+-- AMMINISTRATORI
 INSERT INTO Utente(Username, Email, Password, Nome, Cognome, LuogoNascita, AnnoNascita) VALUES("Lollo", "lorenzo@cuoco.it", "Lollo", "Lorenzo", "Cuoco", "Bologna", 2003);
 INSERT INTO Amministratore(EmailUtenteAmministratore, CodiceSicurezza) VALUES("lorenzo@cuoco.it", 2785);
 INSERT INTO Utente(Username, Email, Password, Nome, Cognome, LuogoNascita, AnnoNascita) VALUES("Fede", "federico@tessari.it", "Fede", "Federico", "Tessari", "Soave", 2003);
@@ -534,15 +569,15 @@ INSERT INTO Utente(Username, Email, Password, Nome, Cognome, LuogoNascita, AnnoN
 INSERT INTO Amministratore(EmailUtenteAmministratore, CodiceSicurezza) VALUES("giacomo@mazzoli.it", 9632);
 
 -- CREATORI
-INSERT INTO Utente VALUES ('marco', 'marco@mail.it', 'pwd123', 'Marco', 'Rossi', 'Milano', 1995, NULL, NULL);
+INSERT INTO Utente VALUES ('marco', 'marco@mail.it', 'pwd123', 'Marco', 'Rossi', 'Milano', 1995);
 INSERT INTO Creatore VALUES ('marco@mail.it', 1, 0);
 
-INSERT INTO Utente VALUES ('giulia', 'giulia@mail.it', 'pwd456', 'Giulia', 'Verdi', 'Roma', 1990, NULL, NULL);
+INSERT INTO Utente VALUES ('giulia', 'giulia@mail.it', 'pwd456', 'Giulia', 'Verdi', 'Roma', 1990);
 INSERT INTO Creatore VALUES ('giulia@mail.it', 1, 0);
 
 -- FINANZIATORI
-INSERT INTO Utente VALUES ('luca', 'luca@mail.it', 'pwd789', 'Luca', 'Bianchi', 'Napoli', 1999, NULL, NULL);
-INSERT INTO Utente VALUES ('anna', 'anna@mail.it', 'pwd000', 'Anna', 'Neri', 'Torino', 2001, NULL, NULL);
+INSERT INTO Utente VALUES ('luca', 'luca@mail.it', 'pwd789', 'Luca', 'Bianchi', 'Napoli', 1999);
+INSERT INTO Utente VALUES ('anna', 'anna@mail.it', 'pwd000', 'Anna', 'Neri', 'Torino', 2001);
 
 -- PROGETTI
 INSERT INTO Progetto VALUES ('SmartLamp', CURDATE(), 1000, 'Lampada smart per la casa', 'aperto', CURDATE() + INTERVAL 10 DAY, 'marco@mail.it');
@@ -556,3 +591,15 @@ INSERT INTO Reward (Descrizione, Foto, NomeProgetto) VALUES ('T-shirt', 'img2.jp
 INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward) VALUES (300, CURDATE(), 'luca@mail.it', 'SmartLamp', 1);
 INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward) VALUES (500, CURDATE(), 'anna@mail.it', 'SmartLamp', 1);
 INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward) VALUES (800, CURDATE(), 'luca@mail.it', 'EcoPrinter', 2);
+
+-- COMPETENZE
+INSERT INTO Competenza (Nome) VALUES 
+('Sql'),
+('Java'),
+('Js'),
+('Web Dev.'),
+('Maintenance Hw'),
+('Hw design'),
+('Data analysis'),
+('Leadership'),
+('Teamwork');

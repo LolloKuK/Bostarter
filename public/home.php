@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 
 if (isset($_POST['logout'])) {
@@ -54,7 +58,6 @@ if ($result) {
       </form>
       <a href="insert-skill.php" class="btn btn-outline-primary me-2">Skill</a>
       <a href="new-project.php" class="btn btn-success me-2">Crea</a>
-      <a href="admin.php" class="btn btn-outline-primary">Dashboard</a>
     <?php else: ?>
       <a href="login.php" class="btn btn-primary">Login</a>
     <?php endif; ?>

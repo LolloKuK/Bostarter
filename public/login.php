@@ -64,6 +64,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
     $stmt->close();
     $conn->next_result();
 }
+
+// Admin Login
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["admin_login"])) {
+    $email = $_POST["admin_email"];
+    $password = $_POST["admin_password"];
+    $codice = intval($_POST["admin_codice"]);
+
+    $stmt = $conn->prepare("CALL sp_autentica_amministratore(?, ?, ?)");
+    $stmt->bind_param("ssi", $email, $password, $codice);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result && $result->num_rows === 1) {
+        $_SESSION['admin_email'] = $email;
+        header("Location: admin.php");
+        exit();
+    } else {
+        $admin_error = "Credenziali da amministratore errate.";
+    }
+
+    $stmt->close();
+    $conn->next_result();
+}
 ?>
 
 <!DOCTYPE html>
@@ -105,6 +128,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
     </li>
     <li class="nav-item">
       <a class="nav-link" id="tab-register" onclick="toggleForm('register')">Registrazione</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" id="tab-admin" onclick="toggleForm('admin')">Admin</a>
     </li>
   </ul>
 
@@ -164,14 +190,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
     </div>
     <button type="submit" name="register" class="btn btn-success w-100">Registrati</button>
   </form>
+
+  <!-- Login Admin -->
+  <form id="admin-form" method="POST" class="d-none">
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input type="email" name="admin_email" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      <div class="input-group">
+        <input type="password" name="admin_password" id="admin_password" class="form-control" required>
+        <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('admin_password')">Mostra</button>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Codice Sicurezza</label>
+      <input type="number" name="admin_codice" class="form-control" required>
+    </div>
+    <button type="submit" name="admin_login" class="btn btn-danger w-100">Accedi come Admin</button>
+    <?php if (isset($admin_error)): ?>
+      <div class="text-danger fw-semibold text-center mt-2">
+        <?= $admin_error ?>
+      </div>
+    <?php endif; ?>
+</form>
 </div>
 
 <script>
   function toggleForm(tab) {
     document.getElementById('login-form').classList.toggle('d-none', tab !== 'login');
     document.getElementById('register-form').classList.toggle('d-none', tab !== 'register');
+    document.getElementById('admin-form').classList.toggle('d-none', tab !== 'admin');
     document.getElementById('tab-login').classList.toggle('active', tab === 'login');
     document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    document.getElementById('tab-admin').classList.toggle('active', tab === 'admin');
   }
 
   function togglePassword(id) {

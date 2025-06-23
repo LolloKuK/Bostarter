@@ -21,8 +21,18 @@ if ($conn->connect_error) {
     die("Connessione fallita: " . $conn->connect_error);
 }
 
+// Recupera competenze disponibili dalla tabella Competenza
+$lista_competenze = [];
+$res = $conn->query("SELECT Nome FROM Competenza ORDER BY Nome ASC");
+if ($res) {
+    while ($row = $res->fetch_assoc()) {
+        $lista_competenze[] = $row['Nome'];
+    }
+}
+
 $esito = "";
 
+// Inserimento o modifica skill
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_skill']) && isset($_POST['register_livello'])) {
     $skill = $_POST['register_skill'];
     $livello = $_POST['register_livello'];
@@ -38,9 +48,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_skill']) && i
     }
 
     $stmt->close();
+    $conn->next_result();
 }
-?>
 
+// Recupero skill già associate all'utente
+$skill_utente = [];
+$sql = $conn->prepare("SELECT Nome, Livello FROM SkillUtente WHERE EmailUtente = ?");
+$sql->bind_param("s", $_SESSION['email']);
+$sql->execute();
+$result = $sql->get_result();
+while ($row = $result->fetch_assoc()) {
+    $skill_utente[] = $row;
+}
+$sql->close();
+?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -57,22 +78,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_skill']) && i
   </nav>
 
   <div class="container mt-5">
-    <h3 class="mb-4">Inserisci la tua competenza</h3>
+    <h3 class="mb-4">Inserisci o aggiorna una tua competenza</h3>
 
     <form method="POST">
       <div class="mb-3">
         <label class="form-label">Skill</label>
         <select name="register_skill" class="form-select" required>
           <option value="">Seleziona una skill</option>
-          <option value="Sql">Sql</option>
-          <option value="Java">Java</option>
-          <option value="Js">Js</option>
-          <option value="Web Dev.">Web Dev.</option>
-          <option value="Maintenance Hw">Maintenance Hw</option>
-          <option value="Hw design">Hw design</option>
-          <option value="Data analysis">Data analysis</option>
-          <option value="Leadership">Leadership</option>
-          <option value="Teamwork">Teamwork</option>
+          <?php foreach ($lista_competenze as $comp): ?>
+            <option value="<?= htmlspecialchars($comp) ?>"><?= htmlspecialchars($comp) ?></option>
+          <?php endforeach; ?>
         </select>
       </div>
 
@@ -80,12 +95,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_skill']) && i
         <label class="form-label">Livello (0-5)</label>
         <select name="register_livello" class="form-select" required>
           <option value="">Seleziona un livello</option>
-          <option value="0">0</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
+          <?php for ($i = 0; $i <= 5; $i++): ?>
+            <option value="<?= $i ?>"><?= $i ?></option>
+          <?php endfor; ?>
         </select>
       </div>
 
@@ -93,6 +105,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_skill']) && i
     </form>
 
     <?= $esito ?>
+
+    <?php if (!empty($skill_utente)): ?>
+      <h4 class="mt-5">Le tue competenze attuali</h4>
+      <table class="table table-bordered mt-3">
+        <thead class="table-light">
+          <tr>
+            <th>Skill</th>
+            <th>Livello</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($skill_utente as $entry): ?>
+            <tr>
+              <td><?= htmlspecialchars($entry['Nome']) ?></td>
+              <td><?= $entry['Livello'] ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    <?php else: ?>
+      <div class="text-muted mt-5">Nessuna competenza salvata.</div>
+    <?php endif; ?>
   </div>
 </body>
 </html>
