@@ -133,7 +133,7 @@ CREATE TABLE Reclutamento (
 /*-----------------------------------------------------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------------------------------*/
-/*OPERAZIONI SUI DATI (IMPLEMENTATE TRAMITE STORED PROCEDURE)
+/*OPERAZIONI SUI DATI
 operazioni che riguardano tutti gli utenti*/
 
 /*registrazione utente*/
@@ -380,30 +380,35 @@ DELIMITER ;
 /*-----------------------------------------------------------------------------------------------------*/
 /*STATISTICHE (IMPLEMENTATE TRAMITE VISTE)*/
 
-/*Visualizzare la classifica	degli utenti creatori, in base al loro valore di affidabilità. Mostrare solo il nickname dei primi 3 utenti.*/
-SELECT EmailUtenteCreatore, Affidabilità
-FROM Creatore
-ORDER BY Affidabilità DESC
+-- Classifica TOP 3 creatori per affidabilità
+CREATE OR REPLACE VIEW v_top_creatori AS
+SELECT u.Username, c.Affidabilità
+FROM Creatore c
+JOIN Utente u ON u.Email = c.EmailUtenteCreatore
+ORDER BY c.Affidabilità DESC
 LIMIT 3;
 
-/*Visualizzare i	progetti APERTI	che	sono più vicini	al proprio completamento(=minore differenza tra budget richiesto e somma totale dei finanziamenti ricevuti). Mostrare solo i primi 3 progetti.*/
-SELECT p.Nome, 
-       p.Budget, 
-       SUM(f.Importo) AS SommaFinanziamenti, 
-       ABS(p.Budget - SUM(f.Importo)) AS Differenza
+-- Progetti APERTI più vicini al completamento
+CREATE OR REPLACE VIEW v_progetti_vicini_completamento AS
+SELECT 
+    p.Nome,
+    p.Budget,
+    COALESCE(SUM(f.Importo), 0) AS TotaleFinanziato,
+    ABS(p.Budget - COALESCE(SUM(f.Importo), 0)) AS Differenza
 FROM Progetto p
-JOIN Finanziamento f ON p.Nome = f.NomeProgetto
-WHERE p.Stato = 'Aperto'
-GROUP BY p.Nome
+LEFT JOIN Finanziamento f ON p.Nome = f.NomeProgetto
+WHERE p.Stato = 'aperto'
+GROUP BY p.Nome, p.Budget
 ORDER BY Differenza ASC
 LIMIT 3;
 
-/*Visualizzare la classifica degli utenti, ordinati in base al totale di finanziamenti erogati. Mostrare solo i nickname dei primi 3 utenti*/
-SELECT f.EmailUtente, 
-       SUM(f.Importo) AS TotaleFinanziamenti
+-- Classifica TOP 3 utenti per totale finanziamenti erogati
+CREATE OR REPLACE VIEW v_top_finanziatori AS
+SELECT u.Username, SUM(f.Importo) AS TotaleFinanziato
 FROM Finanziamento f
-GROUP BY f.EmailUtente
-ORDER BY TotaleFinanziamenti DESC
+JOIN Utente u ON f.EmailUtente = u.Email
+GROUP BY u.Username
+ORDER BY TotaleFinanziato DESC
 LIMIT 3;
 /*-----------------------------------------------------------------------------------------------------*/   
 
@@ -527,3 +532,27 @@ INSERT INTO Utente(Username, Email, Password, Nome, Cognome, LuogoNascita, AnnoN
 INSERT INTO Amministratore(EmailUtenteAmministratore, CodiceSicurezza) VALUES("federico@tessari.it", 6437);
 INSERT INTO Utente(Username, Email, Password, Nome, Cognome, LuogoNascita, AnnoNascita) VALUES("Maz", "giacomo@mazzoli.it", "Maz", "Giacomo", "Mazzoli", "Corticella", 2003);
 INSERT INTO Amministratore(EmailUtenteAmministratore, CodiceSicurezza) VALUES("giacomo@mazzoli.it", 9632);
+
+-- CREATORI
+INSERT INTO Utente VALUES ('marco', 'marco@mail.it', 'pwd123', 'Marco', 'Rossi', 'Milano', 1995, NULL, NULL);
+INSERT INTO Creatore VALUES ('marco@mail.it', 1, 0);
+
+INSERT INTO Utente VALUES ('giulia', 'giulia@mail.it', 'pwd456', 'Giulia', 'Verdi', 'Roma', 1990, NULL, NULL);
+INSERT INTO Creatore VALUES ('giulia@mail.it', 1, 0);
+
+-- FINANZIATORI
+INSERT INTO Utente VALUES ('luca', 'luca@mail.it', 'pwd789', 'Luca', 'Bianchi', 'Napoli', 1999, NULL, NULL);
+INSERT INTO Utente VALUES ('anna', 'anna@mail.it', 'pwd000', 'Anna', 'Neri', 'Torino', 2001, NULL, NULL);
+
+-- PROGETTI
+INSERT INTO Progetto VALUES ('SmartLamp', CURDATE(), 1000, 'Lampada smart per la casa', 'aperto', CURDATE() + INTERVAL 10 DAY, 'marco@mail.it');
+INSERT INTO Progetto VALUES ('EcoPrinter', CURDATE(), 2000, 'Stampante ecologica', 'aperto', CURDATE() + INTERVAL 5 DAY, 'giulia@mail.it');
+
+-- REWARD
+INSERT INTO Reward (Descrizione, Foto, NomeProgetto) VALUES ('Sticker pack', 'img1.jpg', 'SmartLamp');
+INSERT INTO Reward (Descrizione, Foto, NomeProgetto) VALUES ('T-shirt', 'img2.jpg', 'EcoPrinter');
+
+-- FINANZIAMENTI
+INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward) VALUES (300, CURDATE(), 'luca@mail.it', 'SmartLamp', 1);
+INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward) VALUES (500, CURDATE(), 'anna@mail.it', 'SmartLamp', 1);
+INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward) VALUES (800, CURDATE(), 'luca@mail.it', 'EcoPrinter', 2);
