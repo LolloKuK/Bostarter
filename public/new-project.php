@@ -109,6 +109,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
 
+        if (isset($_POST['reward_descrizione']) && isset($_FILES['reward_foto'])) {
+          foreach ($_POST['reward_descrizione'] as $i => $descrizione_reward) {
+            $nome_file = basename($_FILES['reward_foto']['name'][$i]);
+            $tmp_name = $_FILES['reward_foto']['tmp_name'][$i];
+            $path_finale = "images/" . time() . "_" . $nome_file;
+
+            if (move_uploaded_file($tmp_name, $path_finale)) {
+              $relative_path = "images/" . basename($path_finale);
+
+              $stmt_reward = $conn->prepare("CALL sp_inserisci_reward(?, ?, ?)");
+              $stmt_reward->bind_param("sss", $descrizione_reward, $relative_path, $nome);
+              $stmt_reward->execute();
+              $stmt_reward->close();
+              $conn->next_result();
+            }
+          }
+        }
+
         $success_message = "Progetto pubblicato con successo!";
     } else {
         $error_message = "Errore: " . $conn->error;
@@ -164,6 +182,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       </div>`;
       container.insertAdjacentHTML("beforeend", html);
     }
+
+    function addReward() {
+      const container = document.getElementById("reward_fields");
+      const html = `<div class="row mb-2">
+        <div class="col">
+          <input type="text" name="reward_descrizione[]" class="form-control" placeholder="Descrizione" maxlength="50" required>
+        </div>
+        <div class="col">
+          <input type="file" name="reward_foto[]" class="form-control" accept="image/*" required>
+        </div>
+      </div>`;
+      container.insertAdjacentHTML("beforeend", html);
+    }
+
   </script>
   <style>
     input::-webkit-outer-spin-button,
@@ -234,6 +266,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <div class="mb-3">
       <label for="immagini" class="form-label">Carica immagini (puoi selezionare più file)</label>
       <input type="file" class="form-control" name="immagini[]" id="immagini" accept="image/*" multiple>
+    </div>
+
+    <hr>
+    <h4>Reward del progetto</h4>
+    <div id="reward_fields">
+      <button type="button" class="btn btn-secondary btn-sm mb-2" onclick="addReward()">Aggiungi reward</button>
     </div>
 
     <button type="submit" class="btn btn-primary">Pubblica progetto</button>

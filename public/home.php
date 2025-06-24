@@ -123,7 +123,7 @@ if ($result) {
         <div class="card shadow-sm">
           <div class="card-body">
             <h5 class="card-title"><?= htmlspecialchars($progetto['Titolo'] ?? $progetto['Nome']) ?></h5>
-            <a href="dettagli_progetto.php?id=<?= urlencode($progetto['Nome']) ?>" class="btn btn-primary mt-2">Vedi dettagli →</a>
+            <a href="project-info.php?nome=<?= urlencode($progetto['Nome']) ?>" class="btn btn-primary mt-2">Vedi dettagli →</a>
           </div>
         </div>
       </div>

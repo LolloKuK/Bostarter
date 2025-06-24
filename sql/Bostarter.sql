@@ -371,6 +371,77 @@ DELIMITER ;
 /*-----------------------------------------------------------------------------------------------------*/
 -- project-info.php
 
+-- Verifica tipo progetto (hardware o software)
+DELIMITER //
+CREATE PROCEDURE sp_tipo_progetto (
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    IF EXISTS (SELECT 1 FROM ProgSoftware WHERE NomeProgettoSoftware = p_nome_progetto) THEN
+        SELECT 'software' AS Tipo;
+    ELSEIF EXISTS (SELECT 1 FROM ProgHardware WHERE NomeProgettoHardware = p_nome_progetto) THEN
+        SELECT 'hardware' AS Tipo;
+    ELSE
+        SELECT 'generico' AS Tipo;
+    END IF;
+END //
+DELIMITER ;
+
+-- Componenti richiesti (solo se hardware)
+DELIMITER //
+CREATE PROCEDURE sp_componenti_progetto (
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    SELECT c.Nome, c.Prezzo, c.Descrizione, c.Quantità
+    FROM Componente c
+    JOIN Composizione comp ON c.Nome = comp.NomeComponente
+    WHERE comp.NomeProgetto = p_nome_progetto;
+END //
+DELIMITER ;
+
+-- Profili richiesti (solo se software)
+DELIMITER //
+CREATE PROCEDURE sp_profili_progetto (
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    SELECT Nome, Competenza, Livello
+    FROM Profilo
+    WHERE NomeProgetto = p_nome_progetto;
+END //
+DELIMITER ;
+
+-- Reward associati al progetto
+DELIMITER //
+CREATE PROCEDURE sp_reward_progetto (
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    SELECT Descrizione, Foto FROM Reward WHERE NomeProgetto = p_nome_progetto;
+END //
+DELIMITER ;
+
+-- Foto associate al progetto
+DELIMITER //
+CREATE PROCEDURE sp_foto_progetto (
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    SELECT Percorso FROM Foto WHERE NomeProgetto = p_nome_progetto;
+END //
+DELIMITER ;
+
+-- Visualizza dettagli progetto
+DELIMITER //
+CREATE PROCEDURE sp_dettagli_progetto (
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    SELECT * FROM Progetto WHERE Nome = p_nome_progetto;
+END //
+DELIMITER ;
+
 /*
 -- finanziamento progetto aperto
 DELIMITER //
