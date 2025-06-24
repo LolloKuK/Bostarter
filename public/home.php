@@ -56,7 +56,7 @@ if ($result) {
       <form method="POST" class="d-inline me-2 align-self-center">
         <button type="submit" name="logout" class="btn btn-link text-decoration-underline py-1 px-0 align-baseline">Esci</button>
       </form>
-      <a href="insert-skill.php" class="btn btn-outline-primary me-2">Skill</a>
+      <a href="insert-skill.php" class="btn btn-outline-primary me-2">Gestisci</a>
       <a href="new-project.php" class="btn btn-success me-2">Crea</a>
     <?php else: ?>
       <a href="login.php" class="btn btn-primary">Login</a>
@@ -64,7 +64,7 @@ if ($result) {
   </div>
 </nav>
 
-<div class="container mt-5">
+<div class="container mt-5" style="padding-bottom: 120px;">
   <h2 class="mb-3">Classifica dei creatori più affidabili</h2>
   <table class="table table-bordered">
     <thead><tr><th>N°</th><th>Nickname</th><th>Affidabilità</th></tr></thead>

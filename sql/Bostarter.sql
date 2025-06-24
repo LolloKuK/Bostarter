@@ -61,12 +61,58 @@ CREATE TABLE Reward(
     );
 
 CREATE TABLE Foto(
-	Id INT auto_increment PRIMARY KEY,
-    Percorso VARCHAR(50),
+    Id INT auto_increment PRIMARY KEY,
+    Percorso VARCHAR(255),
     NomeProgetto VARCHAR(20),
     foreign key (NomeProgetto) references Progetto(Nome)
     );
 
+CREATE TABLE ProgSoftware(
+	NomeProgettoSoftware VARCHAR(20) PRIMARY KEY,
+    foreign key (NomeProgettoSoftware) references Progetto(Nome)
+    );
+
+CREATE TABLE ProgHardware(
+	NomeProgettoHardware VARCHAR(20) PRIMARY KEY,
+	foreign key (NomeProgettoHardware) references Progetto(Nome)
+    );
+
+CREATE TABLE Componente(
+	Nome varchar(20) primary key,
+    Prezzo int,
+    Descrizione varchar(20),
+    Quantità int
+    );
+
+CREATE TABLE Composizione(
+	NomeComponente varchar(20),
+    NomeProgetto varchar(20),
+    PRIMARY KEY (NomeComponente, NomeProgetto),
+    foreign key (NomeComponente) references Componente(Nome),
+	foreign key (NomeProgetto) references Progetto(Nome)
+    );
+
+CREATE TABLE Profilo (
+	Nome varchar(20) primary key,
+    Competenza varchar(20),
+    Livello int,
+    NomeProgetto varchar(20),
+    FOREIGN KEY (NomeProgetto) REFERENCES Progetto(Nome)
+    );
+
+CREATE TABLE Finanziamento(
+	Id int auto_increment primary key,
+	Importo int, 
+	Data date,
+    EmailUtente varchar(20),
+    NomeProgetto varchar(20),
+    CodiceReward int,
+    FOREIGN KEY (EmailUtente) REFERENCES Utente(Email),
+    FOREIGN KEY (NomeProgetto) REFERENCES Progetto(Nome),
+    FOREIGN KEY (CodiceReward) REFERENCES Reward(Id)
+	);
+
+/*
 CREATE TABLE Commento(
 	Id INT auto_increment PRIMARY KEY,
     Data DATE,
@@ -84,67 +130,25 @@ CREATE TABLE Risposta(
     foreign key (EmailUtente) references Utente(Email)
     );
     
-CREATE TABLE ProgSoftware(
-	NomeProgettoSoftware VARCHAR(20) PRIMARY KEY,
-    foreign key (NomeProgettoSoftware) references Progetto(Nome)
-    );
-    
-CREATE TABLE ProgHardware(
-	NomeProgettoHardware VARCHAR(20) PRIMARY KEY,
-	foreign key (NomeProgettoHardware) references Progetto(Nome)
-    );
-    
-CREATE TABLE Componente(
-	Nome varchar(20) primary key,
-    Prezzo int,
-    Descrizione varchar(20),
-    Quantità int
-    );
-    
-CREATE TABLE Composizione(
-	NomeComponente varchar(20),
-    NomeProgetto varchar(20),
-    PRIMARY KEY (NomeComponente, NomeProgetto),
-    foreign key (NomeComponente) references Componente(Nome),
-	foreign key (NomeProgetto) references Progetto(Nome)
-    );
-    
-CREATE TABLE Finanziamento(
-	Id int auto_increment primary key,
-	Importo int, 
-	Data date,
-    EmailUtente varchar(20),
-    NomeProgetto varchar(20),
-    CodiceReward int,
+CREATE TABLE Candidatura (
+    EmailUtente VARCHAR(50),
+    NomeProgetto VARCHAR(20),
+    NomeProfilo VARCHAR(20),
+    PRIMARY KEY (EmailUtente, NomeProgetto, NomeProfilo),
     FOREIGN KEY (EmailUtente) REFERENCES Utente(Email),
     FOREIGN KEY (NomeProgetto) REFERENCES Progetto(Nome),
-    FOREIGN KEY (CodiceReward) REFERENCES Reward(Id)
-	);
-    
-CREATE TABLE Profilo (
-	Nome varchar(20) primary key,
-    Competenza varchar(5),
-    Livello int,
-    EmailUtente varchar(20),
-    foreign key (EmailUtente) references Utente(Email)
+    FOREIGN KEY (NomeProfilo) REFERENCES Profilo(Nome)
     );
-    
-CREATE TABLE Reclutamento (
-	NomeProfilo varchar(20),
-    NomeProgetto varchar (20),
-    PRIMARY KEY (NomeProfilo, NomeProgetto),
-    foreign key (NomeProfilo) references Profilo(Nome),
-    foreign key (NomeProgetto) references Progetto(Nome)
-    );
+*/
 
 /*-----------------------------------------------------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------------------------------*/
 /*OPERAZIONI SUI DATI*/
 
-/*login.php*/
+-- login.php
 
-/*registrazione utente*/
+-- registrazione utente
 DELIMITER //
 CREATE PROCEDURE sp_registra_utente (
 	IN p_username VARCHAR(20),
@@ -161,7 +165,7 @@ BEGIN
 END //
 DELIMITER ;
 
-/*autenticazione utente*/
+-- autenticazione utente
 DELIMITER //
 CREATE PROCEDURE sp_autentica_utente (
 	IN p_email VARCHAR(50),
@@ -174,7 +178,7 @@ BEGIN
 END //
 DELIMITER ;
 
-/*autenticazione amministratore*/
+-- autenticazione amministratore
 DELIMITER //
 CREATE PROCEDURE sp_autentica_amministratore (
     IN p_email VARCHAR(50),
@@ -192,10 +196,9 @@ END //
 DELIMITER ;
 
 /*-----------------------------------------------------------------------------------------------------*/
+-- home.php
 
-/*home.php*/
-
-/*visualizzazione progetto disponibili (aperti)*/
+-- visualizzazione progetto disponibili (aperti)
 DELIMITER //
 CREATE PROCEDURE sp_visualizza_progetti_aperti()
 BEGIN
@@ -205,10 +208,9 @@ END //
 DELIMITER ;
 
 /*-----------------------------------------------------------------------------------------------------*/
+-- insert-skill.php
 
-/*insert-skill.php*/
-
-/*Inserisci skill nel curriculum*/
+-- inserisci skill nel curriculum
 DELIMITER //
 CREATE PROCEDURE sp_aggiungi_o_modifica_skill(
     IN p_email VARCHAR(50),
@@ -233,10 +235,144 @@ END //
 DELIMITER ;
 
 /*-----------------------------------------------------------------------------------------------------*/
+-- admin.php
 
-/*project-info.php*/
+-- inserimento nuova competenza
+DELIMITER //
+CREATE PROCEDURE sp_aggiungi_competenza(IN p_nome VARCHAR(20))
+BEGIN
+    INSERT INTO Competenza (Nome) VALUES (p_nome);
+END //
+DELIMITER ;
 
-/*finanziamento progetto aperto*/
+-- eliminazione competenza
+DELIMITER //
+CREATE PROCEDURE sp_elimina_competenza(IN p_nome VARCHAR(20))
+BEGIN
+    DELETE FROM Competenza WHERE Nome = p_nome;
+END //
+DELIMITER ;
+
+/*-----------------------------------------------------------------------------------------------------*/
+-- new-project.php
+
+-- Inserimento progetto hardware
+DELIMITER //
+CREATE PROCEDURE sp_inserisci_progetto_hardware (
+    IN p_nome VARCHAR(20),
+    IN p_data_inserimento DATE,
+    IN p_budget INT,
+    IN p_descrizione VARCHAR(200),
+    IN p_data_limite DATE,
+    IN p_email_creatore VARCHAR(50)
+)
+BEGIN
+    -- Se l'utente non è ancora un creatore, lo inseriamo
+    IF NOT EXISTS (
+        SELECT 1 FROM Creatore WHERE EmailUtenteCreatore = p_email_creatore
+    ) THEN
+        INSERT INTO Creatore (EmailUtenteCreatore, NrProgetti, Affidabilità)
+        VALUES (p_email_creatore, 0, 0);
+    END IF;
+
+    -- Inserimento progetto
+    INSERT INTO Progetto (Nome, DataInserimento, Budget, Descrizione, Stato, DataLimite, EmailUtente)
+    VALUES (p_nome, p_data_inserimento, p_budget, p_descrizione, 'aperto', p_data_limite, p_email_creatore);
+
+    -- Inserimento relazione hardware
+    INSERT INTO ProgHardware (NomeProgettoHardware)
+    VALUES (p_nome);
+END //
+DELIMITER ;
+
+-- Inserimento progetto software
+DELIMITER //
+CREATE PROCEDURE sp_inserisci_progetto_software (
+    IN p_nome VARCHAR(20),
+    IN p_data_inserimento DATE,
+    IN p_budget INT,
+    IN p_descrizione VARCHAR(200),
+    IN p_data_limite DATE,
+    IN p_email_creatore VARCHAR(50)
+)
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM Creatore WHERE EmailUtenteCreatore = p_email_creatore
+    ) THEN
+        INSERT INTO Creatore (EmailUtenteCreatore, NrProgetti, Affidabilità)
+        VALUES (p_email_creatore, 0, 0);
+    END IF;
+
+    INSERT INTO Progetto (Nome, DataInserimento, Budget, Descrizione, Stato, DataLimite, EmailUtente)
+    VALUES (p_nome, p_data_inserimento, p_budget, p_descrizione, 'aperto', p_data_limite, p_email_creatore);
+
+    INSERT INTO ProgSoftware (NomeProgettoSoftware)
+    VALUES (p_nome);
+END //
+DELIMITER ;
+
+-- Inserimento componente
+DELIMITER //
+CREATE PROCEDURE sp_inserisci_componente (
+    IN p_nome VARCHAR(20),
+    IN p_prezzo INT,
+    IN p_descrizione VARCHAR(20),
+    IN p_quantita INT,
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    INSERT INTO Componente (Nome, Prezzo, Descrizione, Quantità)
+    VALUES (p_nome, p_prezzo, p_descrizione, p_quantita);
+
+    INSERT INTO Composizione (NomeComponente, NomeProgetto)
+    VALUES (p_nome, p_nome_progetto);
+END //
+DELIMITER ;
+
+-- Inserimento profilo richiesto
+DELIMITER //
+CREATE PROCEDURE sp_inserisci_profilo (
+    IN p_nome VARCHAR(20),
+    IN p_competenza VARCHAR(20),
+    IN p_livello INT,
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    INSERT INTO Profilo(Nome, Competenza, Livello, NomeProgetto)
+    VALUES (p_nome, p_competenza, p_livello, p_nome_progetto);
+END //
+DELIMITER ;
+
+-- Inserimento foto per un progetto
+DELIMITER //
+CREATE PROCEDURE sp_inserisci_foto (
+    IN p_percorso VARCHAR(255),
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    INSERT INTO Foto (Percorso, NomeProgetto)
+    VALUES (p_percorso, p_nome_progetto);
+END //
+DELIMITER ;
+
+-- inserimento reward per un progetto
+DELIMITER //
+CREATE PROCEDURE sp_inserisci_reward (
+    IN p_descrizione VARCHAR(20),
+    IN p_foto VARCHAR(50),
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    INSERT INTO Reward(Descrizione, Foto, NomeProgetto)
+    VALUES (p_descrizione, p_foto, p_nome_progetto);
+END //
+DELIMITER ;
+
+/*-----------------------------------------------------------------------------------------------------*/
+-- project-info.php
+
+/*
+-- finanziamento progetto aperto
 DELIMITER //
 CREATE PROCEDURE finanzia_progetto (
     IN p_id_utente INT,
@@ -263,7 +399,7 @@ BEGIN
 END //
 DELIMITER ;
 
-/*scelta reward*/
+-- scelta reward
 DELIMITER //
 CREATE PROCEDURE sp_finanzia_progetto (
     IN p_importo INT,
@@ -277,32 +413,7 @@ BEGIN
 END //
 DELIMITER ;
 
-/*inserimento commento relativo al progetto*/
-DELIMITER //
-CREATE PROCEDURE sp_commenta_progetto (
-	IN p_testo VARCHAR(255),
-    IN p_email_utente VARCHAR(50),
-    IN p_nome_progetto VARCHAR(20)
-)
-BEGIN
-	INSERT INTO Commento(Data, Testo, EmailUtente, NomeProgetto)
-    VALUES (CURDATE(), p_testo, p_email_utente, p_nome_progetto);
-END //
-DELIMITER ;
-
-/*inserimento risposta ad un commento*/
-DELIMITER //
-CREATE PROCEDURE sp_rispondi_a_commento (
-    IN p_id_commento INT,
-    IN p_email_creatore VARCHAR(50)
-)
-BEGIN
-    INSERT INTO Risposta(Id, EmailUtente)
-    VALUES (p_id_commento, p_email_creatore);
-END //
-DELIMITER ;
-
-/*inserimento candidatura*/
+-- inserimento candidatura
 DELIMITER //
 CREATE PROCEDURE sp_inserisci_candidatura (
 	IN p_email_utente VARCHAR(50),
@@ -314,72 +425,13 @@ BEGIN
     VALUES (p_email_utente, p_nome_progetto, p_nome_profilo);
 END //
 DELIMITER ;
+*/
 
 /*-----------------------------------------------------------------------------------------------------*/
+-- 
 
-/*admin.php*/
-
-/*inserimento nuova competenza*/
-DELIMITER //
-CREATE PROCEDURE sp_aggiungi_competenza(IN p_nome VARCHAR(20))
-BEGIN
-    INSERT INTO Competenza (Nome) VALUES (p_nome);
-END //
-DELIMITER ;
-
-/*eliminazione competenza*/
-DELIMITER //
-CREATE PROCEDURE sp_elimina_competenza(IN p_nome VARCHAR(20))
-BEGIN
-    DELETE FROM Competenza WHERE Nome = p_nome;
-END //
-DELIMITER ;
-
-/*-----------------------------------------------------------------------------------------------------*/
-
-/*new-project.php*/
-
-/*inserimento nuovo progetto*/
-DELIMITER //
-CREATE PROCEDURE sp_inserisci_progetto (
-    IN p_nome VARCHAR(20),
-    IN p_data_inserimento DATE,
-    IN p_budget INT,
-    IN p_descrizione VARCHAR(200),
-    IN p_data_limite DATE,
-    IN p_email_creatore VARCHAR(50)
-)
-BEGIN
-    INSERT INTO Progetto (
-        Nome, DataInserimento, Budget, Descrizione, Stato, DataLimite, EmailUtente
-    )
-    VALUES (
-        p_nome, p_data_inserimento, p_budget, p_descrizione, 'aperto', p_data_limite, p_email_creatore
-    );
-
-    UPDATE Creatore
-    SET NrProgetti = NrProgetti + 1
-    WHERE EmailUtenteCreatore = p_email_creatore;
-END //
-DELIMITER ;
-
-/*inserimento reward per un progetto*/
-DELIMITER //
-CREATE PROCEDURE sp_inserisci_reward (
-    IN p_codice INT,
-    IN p_descrizione VARCHAR(20),
-    IN p_foto INT,
-    IN p_nome_progetto VARCHAR(20)
-)
-BEGIN
-    INSERT INTO Reward(Codice, Descrizione, Foto, NomeProgetto)
-    VALUES (p_codice, p_descrizione, p_foto, p_nome_progetto);
-END //
-DELIMITER ;
-
-/**/
-
-/*inserimento di un profilo (solo per progetto software)*/
+/*
+-- inserimento di un profilo (solo per progetto software)
 DELIMITER //
 CREATE PROCEDURE sp_inserisci_profilo (
     IN p_nome VARCHAR(20),
@@ -393,7 +445,7 @@ BEGIN
 END //
 DELIMITER ;
 
-/*accettazione o meno della candidatura*/
+-- accettazione o meno della candidatura
 DELIMITER //
 CREATE PROCEDURE sp_valuta_candidatura_senza_tabella (
     IN p_email_utente VARCHAR(50),
@@ -409,10 +461,40 @@ BEGIN
       AND Nome = p_nome_profilo;
 END //
 DELIMITER ;
-/*-----------------------------------------------------------------------------------------------------*/
+*/
 
 /*-----------------------------------------------------------------------------------------------------*/
-/*STATISTICHE*/
+-- 
+
+/**
+-- inserimento commento relativo al progetto
+DELIMITER //
+CREATE PROCEDURE sp_commenta_progetto (
+	IN p_testo VARCHAR(255),
+    IN p_email_utente VARCHAR(50),
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+	INSERT INTO Commento(Data, Testo, EmailUtente, NomeProgetto)
+    VALUES (CURDATE(), p_testo, p_email_utente, p_nome_progetto);
+END //
+DELIMITER ;
+
+-- inserimento risposta ad un commento
+DELIMITER //
+CREATE PROCEDURE sp_rispondi_a_commento (
+    IN p_id_commento INT,
+    IN p_email_creatore VARCHAR(50)
+)
+BEGIN
+    INSERT INTO Risposta(Id, EmailUtente)
+    VALUES (p_id_commento, p_email_creatore);
+END //
+DELIMITER ;
+*/
+
+/*-----------------------------------------------------------------------------------------------------*/
+-- STATISTICHE
 
 -- Classifica TOP 3 creatori per affidabilità
 CREATE OR REPLACE VIEW v_top_creatori AS
@@ -444,24 +526,31 @@ JOIN Utente u ON f.EmailUtente = u.Email
 GROUP BY u.Username
 ORDER BY TotaleFinanziato DESC
 LIMIT 3;
+
 /*-----------------------------------------------------------------------------------------------------*/   
 
 /*-----------------------------------------------------------------------------------------------------*/
 /*IMPLEMENTAZIONE TRIGGER*/
 
-/*Incrementa NrProgetti e aggiorna affidabilità al momento della creazione progetto*/
+-- Incrementa NrProgetti quando un creatore inserisce un nuovo progetto
+DELIMITER //
+CREATE TRIGGER trg_incrementa_nr_progetti
+AFTER INSERT ON Progetto
+FOR EACH ROW
+BEGIN
+    UPDATE Creatore
+    SET NrProgetti = NrProgetti + 1
+    WHERE EmailUtenteCreatore = NEW.EmailUtente;
+END //
+DELIMITER ;
+
+-- Aggiorna l’affidabilità di un creatore dopo la creazione di un nuovo progetto
 DELIMITER //
 CREATE TRIGGER trg_incrementa_progetti_affidabilita
 AFTER INSERT ON Progetto
 FOR EACH ROW
 BEGIN
-    
-    #Incrementa numero progetti del creatore
-    UPDATE Creatore
-    SET NrProgetti = NrProgetti + 1
-    WHERE EmailUtenteCreatore = NEW.EmailUtente;
-
-	#Ricalcola affidabilità: % di progetti con almeno un finanziamento
+    -- Ricalcola affidabilità: % di progetti con almeno un finanziamento
     UPDATE Creatore c
     SET Affidabilità = (
         SELECT
@@ -481,8 +570,10 @@ BEGIN
     )
     WHERE c.EmailUtenteCreatore = NEW.EmailUtente;
 END //
+DELIMITER ;
 
-/*Aggiorna affidabilità e chiude progetto se il budget è raggiunto*/
+-- Chiude il progetto se il budget è raggiunto e aggiornare l’affidabilità
+DELIMITER //
 CREATE TRIGGER trg_aggiorna_affidabilita_e_chiusura
 AFTER INSERT ON Finanziamento
 FOR EACH ROW
@@ -491,24 +582,24 @@ BEGIN
     DECLARE v_budget INT;
     DECLARE v_totale INT;
 
-    #Ottieni creatore e budget del progetto
+    -- Ottieni creatore e budget del progetto
     SELECT EmailUtente, Budget INTO v_email_creatore, v_budget
     FROM Progetto
     WHERE Nome = NEW.NomeProgetto;
 
-    #Calcola totale finanziamenti
+    -- Calcola totale finanziamenti
     SELECT SUM(Importo) INTO v_totale
     FROM Finanziamento
     WHERE NomeProgetto = NEW.NomeProgetto;
 
-    #Chiudi progetto se il budget è stato raggiunto
+    -- Chiudi progetto se il budget è stato raggiunto
     IF v_totale >= v_budget THEN
         UPDATE Progetto
         SET Stato = 'chiuso'
         WHERE Nome = NEW.NomeProgetto;
     END IF;
 
-    #Ricalcola affidabilità del creatore
+    -- Ricalcola affidabilità del creatore
     UPDATE Creatore c
     SET Affidabilità = (
         SELECT
@@ -530,23 +621,12 @@ BEGIN
 END //
 DELIMITER ;
 
-/*incremento nr_progetti*/
-DELIMITER //
-CREATE TRIGGER trg_incrementa_nr_progetti
-AFTER INSERT ON Progetto
-FOR EACH ROW
-BEGIN
-    UPDATE Creatore
-    SET NrProgetti = NrProgetti + 1
-    WHERE EmailUtenteCreatore = NEW.EmailUtente;
-END //
-DELIMITER ;
 /*-----------------------------------------------------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------------------------------*/
 /*IMPLEMENTAZIONE EVENTO*/
 
-/*cambio stato di un progetto*/
+-- cambio stato di un progetto
 DELIMITER //
 CREATE EVENT IF NOT EXISTS ev_chiudi_progetti_scaduti
 ON SCHEDULE EVERY 1 DAY
@@ -554,11 +634,14 @@ DO
 BEGIN
     UPDATE Progetto
     SET Stato = 'chiuso'
-    WHERE DataChiusura < CURDATE()
+    WHERE DataLimite < CURDATE()
       AND Stato <> 'chiuso';
 END //
 DELIMITER ;
 /*-----------------------------------------------------------------------------------------------------*/
+
+/*-----------------------------------------------------------------------------------------------------*/
+/*INSERIMENTO DATI DEFAULT*/
 
 -- AMMINISTRATORI
 INSERT INTO Utente(Username, Email, Password, Nome, Cognome, LuogoNascita, AnnoNascita) VALUES("Lollo", "lorenzo@cuoco.it", "Lollo", "Lorenzo", "Cuoco", "Bologna", 2003);
@@ -568,6 +651,19 @@ INSERT INTO Amministratore(EmailUtenteAmministratore, CodiceSicurezza) VALUES("f
 INSERT INTO Utente(Username, Email, Password, Nome, Cognome, LuogoNascita, AnnoNascita) VALUES("Maz", "giacomo@mazzoli.it", "Maz", "Giacomo", "Mazzoli", "Corticella", 2003);
 INSERT INTO Amministratore(EmailUtenteAmministratore, CodiceSicurezza) VALUES("giacomo@mazzoli.it", 9632);
 
+-- COMPETENZE
+INSERT INTO Competenza (Nome) VALUES 
+('Sql'),
+('Java'),
+('Js'),
+('Web Dev.'),
+('Maintenance Hw'),
+('Hw design'),
+('Data analysis'),
+('Leadership'),
+('Teamwork');
+
+/*
 -- CREATORI
 INSERT INTO Utente VALUES ('marco', 'marco@mail.it', 'pwd123', 'Marco', 'Rossi', 'Milano', 1995);
 INSERT INTO Creatore VALUES ('marco@mail.it', 1, 0);
@@ -591,15 +687,4 @@ INSERT INTO Reward (Descrizione, Foto, NomeProgetto) VALUES ('T-shirt', 'img2.jp
 INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward) VALUES (300, CURDATE(), 'luca@mail.it', 'SmartLamp', 1);
 INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward) VALUES (500, CURDATE(), 'anna@mail.it', 'SmartLamp', 1);
 INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward) VALUES (800, CURDATE(), 'luca@mail.it', 'EcoPrinter', 2);
-
--- COMPETENZE
-INSERT INTO Competenza (Nome) VALUES 
-('Sql'),
-('Java'),
-('Js'),
-('Web Dev.'),
-('Maintenance Hw'),
-('Hw design'),
-('Data analysis'),
-('Leadership'),
-('Teamwork');
+*/
