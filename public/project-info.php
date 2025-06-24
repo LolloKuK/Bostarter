@@ -51,7 +51,7 @@ while ($row = $foto_result->fetch_assoc()) {
 $stmt->close();
 $conn->next_result();
 
-// Reward
+// Reward (con ID per il form)
 $stmt = $conn->prepare("CALL sp_reward_progetto(?)");
 $stmt->bind_param("s", $nome_progetto);
 $stmt->execute();
@@ -90,14 +90,39 @@ if ($tipo === "hardware") {
   $stmt->close();
   $conn->next_result();
 }
-?>
 
+// GESTIONE FINANZIAMENTO
+$messaggio_successo = "";
+$messaggio_errore = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finanzia'])) {
+    $importo = (int) $_POST['importo'];
+    $codice_reward = $_POST['reward'] !== "" ? (int) $_POST['reward'] : NULL;
+    $email_utente = $_SESSION['email'] ?? '';
+
+    if ($email_utente === '' || $email_utente === $progetto['EmailUtente']) {
+        $messaggio_errore = "Non puoi finanziare se non sei autenticato o sei il creatore del progetto.";
+    } else {
+        try {
+            $stmt = $conn->prepare("CALL sp_finanzia_progetto(?, ?, ?, ?)");
+            $stmt->bind_param("issi", $importo, $email_utente, $nome_progetto, $codice_reward);
+            $stmt->execute();
+            $messaggio_successo = "Finanziamento registrato con successo!";
+        } catch (mysqli_sql_exception $e) {
+            $messaggio_errore = "Errore: " . $e->getMessage();
+        } finally {
+            if (isset($stmt)) $stmt->close();
+            $conn->next_result();
+        }
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BOSTARTER - Project Details</title>
+  <title>BOSTARTER - Dettagli Progetto</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
@@ -165,6 +190,39 @@ if ($tipo === "hardware") {
           </li>
         <?php endforeach; ?>
       </ul>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['email']) && $_SESSION['email'] !== $progetto['EmailUtente']): ?>
+      <div class="card mb-5 shadow">
+        <div class="card-body">
+          <h4 class="mb-3">Sostieni questo progetto</h4>
+
+          <?php if ($messaggio_successo): ?>
+            <div class="alert alert-success"><?= $messaggio_successo ?></div>
+          <?php elseif ($messaggio_errore): ?>
+            <div class="alert alert-danger"><?= $messaggio_errore ?></div>
+          <?php endif; ?>
+
+          <form method="POST">
+            <div class="mb-3">
+              <label for="importo" class="form-label">Importo (€)</label>
+              <input type="number" name="importo" id="importo" min="1" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="reward" class="form-label">Seleziona una reward (opzionale)</label>
+              <select name="reward" id="reward" class="form-select">
+                <option value="">Nessuna reward</option>
+                <?php foreach ($rewards as $reward): ?>
+                  <option value="<?= $reward['Id'] ?>"><?= htmlspecialchars($reward['Descrizione']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <button type="submit" name="finanzia" class="btn btn-success">Finanzia il progetto</button>
+          </form>
+        </div>
+      </div>
     <?php endif; ?>
 
     <a href="home.php" class="btn btn-secondary">Torna alla Home</a>

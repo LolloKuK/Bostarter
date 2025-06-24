@@ -100,17 +100,18 @@ CREATE TABLE Profilo (
     FOREIGN KEY (NomeProgetto) REFERENCES Progetto(Nome)
     );
 
-CREATE TABLE Finanziamento(
-	Id int auto_increment primary key,
-	Importo int, 
-	Data date,
-    EmailUtente varchar(20),
-    NomeProgetto varchar(20),
-    CodiceReward int,
+CREATE TABLE Finanziamento (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    Importo INT NOT NULL,
+    Data DATE NOT NULL,
+    EmailUtente VARCHAR(50) NOT NULL,
+    NomeProgetto VARCHAR(20) NOT NULL,
+    CodiceReward INT DEFAULT NULL,
     FOREIGN KEY (EmailUtente) REFERENCES Utente(Email),
     FOREIGN KEY (NomeProgetto) REFERENCES Progetto(Nome),
-    FOREIGN KEY (CodiceReward) REFERENCES Reward(Id)
-	);
+    FOREIGN KEY (CodiceReward) REFERENCES Reward(Id),
+    UNIQUE (EmailUtente, NomeProgetto, Data)
+    );
 
 /*
 CREATE TABLE Commento(
@@ -418,7 +419,9 @@ CREATE PROCEDURE sp_reward_progetto (
     IN p_nome_progetto VARCHAR(20)
 )
 BEGIN
-    SELECT Descrizione, Foto FROM Reward WHERE NomeProgetto = p_nome_progetto;
+    SELECT Id, Descrizione, Foto
+    FROM Reward
+    WHERE NomeProgetto = p_nome_progetto;
 END //
 DELIMITER ;
 
@@ -442,35 +445,7 @@ BEGIN
 END //
 DELIMITER ;
 
-/*
--- finanziamento progetto aperto
-DELIMITER //
-CREATE PROCEDURE finanzia_progetto (
-    IN p_id_utente INT,
-    IN p_id_progetto INT,
-    IN p_importo DECIMAL(10,2)
-)
-BEGIN
-    DECLARE stato_progetto VARCHAR(20);
-
-    SELECT stato INTO stato_progetto
-    FROM Progetto
-    WHERE id = p_id_progetto;
-
-    IF stato_progetto IS NULL THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Progetto inesistente.';
-    ELSEIF stato_progetto <> 'aperto' THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Il progetto non è aperto al finanziamento.';
-    END IF;
-
-    INSERT INTO Finanziamento (id_utente, id_progetto, importo, data_finanziamento)
-    VALUES (p_id_utente, p_id_progetto, p_importo, CURRENT_DATE);
-END //
-DELIMITER ;
-
--- scelta reward
+-- Finanziamento di un progetto e scelta reward
 DELIMITER //
 CREATE PROCEDURE sp_finanzia_progetto (
     IN p_importo INT,
@@ -479,11 +454,41 @@ CREATE PROCEDURE sp_finanzia_progetto (
     IN p_codice_reward INT
 )
 BEGIN
-	INSERT INTO Finanziamento(Importo, Data, EmailUtente, NomeProgetto, CodiceReward)
+    DECLARE stato_progetto VARCHAR(20);
+    DECLARE reward_esiste INT;
+
+    -- Verifica che il progetto esista e sia aperto
+    SELECT Stato INTO stato_progetto
+    FROM Progetto
+    WHERE Nome = p_nome_progetto;
+
+    IF stato_progetto IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Progetto inesistente.';
+    ELSEIF stato_progetto <> 'aperto' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Il progetto non è aperto.';
+    END IF;
+
+    -- Se è stato fornito un reward (> 0), controlla che esista ed è legato a quel progetto
+    IF p_codice_reward IS NOT NULL THEN
+        SELECT COUNT(*) INTO reward_esiste
+        FROM Reward
+        WHERE Id = p_codice_reward AND NomeProgetto = p_nome_progetto;
+
+        IF reward_esiste = 0 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Reward non valida per questo progetto.';
+        END IF;
+    END IF;
+
+    -- Inserimento finanziamento (CodiceReward può essere NULL)
+    INSERT INTO Finanziamento (Importo, Data, EmailUtente, NomeProgetto, CodiceReward)
     VALUES (p_importo, CURDATE(), p_email_utente, p_nome_progetto, p_codice_reward);
 END //
 DELIMITER ;
 
+/*
 -- inserimento candidatura
 DELIMITER //
 CREATE PROCEDURE sp_inserisci_candidatura (
