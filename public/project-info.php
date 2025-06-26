@@ -91,6 +91,80 @@ if ($tipo === "hardware") {
   $conn->next_result();
 }
 
+// Commenti + Risposte
+$commenti_risposte = [];
+
+$stmt = $conn->prepare("CALL sp_commenti_con_risposte(?)");
+$stmt->bind_param("s", $nome_progetto);
+$stmt->execute();
+$result = $stmt->get_result();
+
+while ($row = $result->fetch_assoc()) {
+    $id = $row['IdCommento'];
+    if (!isset($commenti_risposte[$id])) {
+        $commenti_risposte[$id] = [
+            'id' => $id,
+            'testo' => $row['TestoCommento'],
+            'data' => $row['DataCommento'],
+            'email' => $row['EmailCommentatore'],
+            'username' => $row['UsernameCommentatore'],
+            'risposte' => []
+        ];
+    }
+    if ($row['IdRisposta']) {
+        $commenti_risposte[$id]['risposte'][] = [
+            'testo' => $row['TestoRisposta'],
+            'email' => $row['EmailRispondente'],
+            'username' => $row['UsernameRispondente']
+        ];
+    }
+}
+$stmt->close();
+$conn->next_result();
+
+// Gestione nuovo commento
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_commento'])) {
+    $testo_commento = trim($_POST['testo_commento']);
+    $email = $_SESSION['email'] ?? '';
+    if ($email !== '' && $email !== $progetto['EmailUtente']) {
+        $stmt = $conn->prepare("CALL sp_commenta_progetto(?, ?, ?)");
+        $stmt->bind_param("sss", $testo_commento, $email, $nome_progetto);
+        $stmt->execute();
+        $stmt->close();
+        $conn->next_result();
+        header("Location: project-info.php?nome=" . urlencode($nome_progetto));
+        exit;
+    }
+}
+
+// Gestione risposta a commento
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_risposta'])) {
+    $id_commento = (int) $_POST['id_commento'];
+    $testo_risposta = trim($_POST['testo_risposta']);
+    $email = $_SESSION['email'] ?? '';
+
+    if ($email === $progetto['EmailUtente']) {
+        // Verifica se già esiste una risposta per questo commento
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM Risposta WHERE IdCommento = ?");
+        $stmt->bind_param("i", $id_commento);
+        $stmt->execute();
+        $stmt->bind_result($risposte_esistenti);
+        $stmt->fetch();
+        $stmt->close();
+
+        if ($risposte_esistenti == 0) {
+            $stmt = $conn->prepare("CALL sp_rispondi_a_commento(?, ?, ?)");
+            $stmt->bind_param("iss", $id_commento, $email, $testo_risposta);
+            $stmt->execute();
+            $stmt->close();
+            $conn->next_result();
+        }
+
+        header("Location: project-info.php?nome=" . urlencode($nome_progetto));
+        exit;
+    }
+}
+
 // GESTIONE FINANZIAMENTO
 $messaggio_successo = "";
 $messaggio_errore = "";
@@ -140,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finanzia'])) {
         <p><strong>Data Limite:</strong> <?= $progetto['DataLimite'] ?></p>
         <p><strong>Budget:</strong> €<?= $progetto['Budget'] ?></p>
         <p><strong>Stato:</strong> <?= ucfirst($progetto['Stato']) ?></p>
-        <p><strong>Email Creatore:</strong> <?= $progetto['EmailUtente'] ?></p>
+        <p><strong>Creatore:</strong> <?= htmlspecialchars($progetto['NomeCreatore']) ?></p>
         <p><strong>Tipo Progetto:</strong> <?= ucfirst($tipo) ?></p>
       </div>
     </div>
@@ -190,6 +264,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finanzia'])) {
           </li>
         <?php endforeach; ?>
       </ul>
+    <?php endif; ?>
+
+    <h4 class="mb-3">Commenti</h4>
+    <?php if (empty($commenti_risposte)): ?>
+      <div class="alert alert-light border text-muted">Non ci sono ancora commenti su questo progetto.</div>
+    <?php else: ?>
+      <?php foreach ($commenti_risposte as $commento): ?>
+        <div class="card mb-3">
+          <div class="card-body">
+            <p><strong><?= htmlspecialchars($commento['username']) ?></strong> <small class="text-muted">(<?= $commento['data'] ?>)</small></p>
+            <p><?= htmlspecialchars($commento['testo']) ?></p>
+
+            <?php if (!empty($commento['risposte'])): ?>
+              <div class="ms-4">
+                <?php foreach ($commento['risposte'] as $risposta): ?>
+                  <div class="border-start ps-3 mb-2">
+                    <p><strong><?= htmlspecialchars($risposta['username']) ?> (Creatore)</strong>: <?= htmlspecialchars($risposta['testo']) ?></p>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+
+            <?php if (
+                isset($_SESSION['email']) &&
+                $_SESSION['email'] === $progetto['EmailUtente'] &&
+                empty($commento['risposte'])  // mostra il form solo se non ci sono risposte
+            ): ?>
+              <form method="POST" class="mt-3">
+                <input type="hidden" name="id_commento" value="<?= $commento['id'] ?>">
+                <div class="mb-2">
+                  <textarea name="testo_risposta" rows="2" class="form-control" placeholder="Rispondi al commento..." required></textarea>
+                </div>
+                <button type="submit" name="invia_risposta" class="btn btn-sm btn-outline-primary">Rispondi</button>
+              </form>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['email']) && $_SESSION['email'] !== $progetto['EmailUtente']): ?>
+      <form method="POST" class="mb-5">
+        <div class="mb-3">
+          <label for="testo_commento" class="form-label">Lascia un commento</label>
+          <textarea name="testo_commento" id="testo_commento" class="form-control" rows="3" required></textarea>
+        </div>
+        <button type="submit" name="invia_commento" class="btn btn-primary">Invia commento</button>
+      </form>
     <?php endif; ?>
 
     <?php if (isset($_SESSION['email']) && $_SESSION['email'] !== $progetto['EmailUtente']): ?>

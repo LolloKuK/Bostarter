@@ -45,8 +45,8 @@ CREATE TABLE Progetto(
 	Nome VARCHAR (20) PRIMARY KEY,
     DataInserimento DATE,
     Budget INt,
-    Descrizione VARCHAR(200),
-    Stato enum ('aperto', 'chiuso'),
+    Descrizione VARCHAR(255),
+    Stato ENUM('aperto', 'chiuso'),
     DataLimite DATE,
     EmailUtente VARCHAR(20),
     foreign key (EmailUtente) references Utente(Email)
@@ -93,11 +93,12 @@ CREATE TABLE Composizione(
     );
 
 CREATE TABLE Profilo (
-	Nome varchar(20) primary key,
-    Competenza varchar(20),
-    Livello int,
-    NomeProgetto varchar(20),
-    FOREIGN KEY (NomeProgetto) REFERENCES Progetto(Nome)
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+	Nome VARCHAR(20),
+    Competenza VARCHAR(20),
+    Livello INT,
+    NomeProgetto VARCHAR(20),
+    foreign key (NomeProgetto) references Progetto(Nome)
     );
 
 CREATE TABLE Finanziamento (
@@ -113,11 +114,10 @@ CREATE TABLE Finanziamento (
     UNIQUE (EmailUtente, NomeProgetto, Data)
     );
 
-/*
 CREATE TABLE Commento(
 	Id INT auto_increment PRIMARY KEY,
     Data DATE,
-    Testo VARCHAR(100),
+    Testo VARCHAR(255),
     EmailUtente VARCHAR(20),
     NomeProgetto VARCHAR(20),
     foreign key (EmailUtente) references Utente(Email),
@@ -126,21 +126,21 @@ CREATE TABLE Commento(
     
 CREATE TABLE Risposta(
 	Id INT auto_increment PRIMARY KEY,
+    Testo VARCHAR(255),
     IdCommento INT,
-    EmailUtente VARCHAR(20),
-    foreign key (EmailUtente) references Utente(Email)
+    EmailUtente VARCHAR(50),
+    FOREIGN KEY (IdCommento) REFERENCES Commento(Id),
+    FOREIGN KEY (EmailUtente) REFERENCES Utente(Email)
     );
-    
+
 CREATE TABLE Candidatura (
     EmailUtente VARCHAR(50),
-    NomeProgetto VARCHAR(20),
-    NomeProfilo VARCHAR(20),
-    PRIMARY KEY (EmailUtente, NomeProgetto, NomeProfilo),
+    IdProfilo INT,
+    Esito ENUM('accettata', 'rifiutata') DEFAULT NULL,
+    PRIMARY KEY (EmailUtente, IdProfilo),
     FOREIGN KEY (EmailUtente) REFERENCES Utente(Email),
-    FOREIGN KEY (NomeProgetto) REFERENCES Progetto(Nome),
-    FOREIGN KEY (NomeProfilo) REFERENCES Profilo(Nome)
+    FOREIGN KEY (IdProfilo) REFERENCES Profilo(Id)
     );
-*/
 
 /*-----------------------------------------------------------------------------------------------------*/
 
@@ -263,7 +263,7 @@ CREATE PROCEDURE sp_inserisci_progetto_hardware (
     IN p_nome VARCHAR(20),
     IN p_data_inserimento DATE,
     IN p_budget INT,
-    IN p_descrizione VARCHAR(200),
+    IN p_descrizione VARCHAR(255),
     IN p_data_limite DATE,
     IN p_email_creatore VARCHAR(50)
 )
@@ -372,6 +372,27 @@ DELIMITER ;
 /*-----------------------------------------------------------------------------------------------------*/
 -- project-info.php
 
+-- Visualizza dettagli progetto
+DELIMITER //
+CREATE PROCEDURE sp_dettagli_progetto (
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    SELECT 
+        p.Nome,
+        p.DataInserimento,
+        p.Budget,
+        p.Descrizione,
+        p.Stato,
+        p.DataLimite,
+        u.Username AS NomeCreatore,
+        u.Email AS EmailUtente
+    FROM Progetto p
+    JOIN Utente u ON p.EmailUtente = u.Email
+    WHERE p.Nome = p_nome_progetto;
+END //
+DELIMITER ;
+
 -- Verifica tipo progetto (hardware o software)
 DELIMITER //
 CREATE PROCEDURE sp_tipo_progetto (
@@ -435,16 +456,6 @@ BEGIN
 END //
 DELIMITER ;
 
--- Visualizza dettagli progetto
-DELIMITER //
-CREATE PROCEDURE sp_dettagli_progetto (
-    IN p_nome_progetto VARCHAR(20)
-)
-BEGIN
-    SELECT * FROM Progetto WHERE Nome = p_nome_progetto;
-END //
-DELIMITER ;
-
 -- Finanziamento di un progetto e scelta reward
 DELIMITER //
 CREATE PROCEDURE sp_finanzia_progetto (
@@ -488,7 +499,57 @@ BEGIN
 END //
 DELIMITER ;
 
-/*
+-- Inserimento commento relativo al progetto
+DELIMITER //
+CREATE PROCEDURE sp_commenta_progetto (
+	IN p_testo VARCHAR(255),
+    IN p_email_utente VARCHAR(50),
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+	INSERT INTO Commento(Data, Testo, EmailUtente, NomeProgetto)
+    VALUES (CURDATE(), p_testo, p_email_utente, p_nome_progetto);
+END //
+DELIMITER ;
+
+-- Inserimento risposta ad un commento
+DELIMITER //
+CREATE PROCEDURE sp_rispondi_a_commento (
+    IN p_id_commento INT,
+    IN p_email_creatore VARCHAR(50),
+    IN p_testo VARCHAR(255)
+)
+BEGIN
+    INSERT INTO Risposta(IdCommento, EmailUtente, Testo)
+    VALUES (p_id_commento, p_email_creatore, p_testo);
+END //
+DELIMITER ;
+
+-- Recupera commenti e risposte per un progetto
+DELIMITER //
+CREATE PROCEDURE sp_commenti_con_risposte (
+    IN p_nome_progetto VARCHAR(20)
+)
+BEGIN
+    SELECT 
+        c.Id AS IdCommento,
+        c.Testo AS TestoCommento,
+        c.Data AS DataCommento,
+        c.EmailUtente AS EmailCommentatore,
+        u.Username AS UsernameCommentatore,
+        r.Id AS IdRisposta,
+        r.Testo AS TestoRisposta,
+        r.EmailUtente AS EmailRispondente,
+        ur.Username AS UsernameRispondente
+    FROM Commento c
+    JOIN Utente u ON c.EmailUtente = u.Email
+    LEFT JOIN Risposta r ON r.IdCommento = c.Id
+    LEFT JOIN Utente ur ON r.EmailUtente = ur.Email
+    WHERE c.NomeProgetto = p_nome_progetto
+    ORDER BY c.Data ASC, r.Id ASC;
+END //
+DELIMITER ;
+
 -- inserimento candidatura
 DELIMITER //
 CREATE PROCEDURE sp_inserisci_candidatura (
@@ -497,27 +558,8 @@ CREATE PROCEDURE sp_inserisci_candidatura (
     IN p_nome_profilo VARCHAR(20)
 )
 BEGIN
-	INSERT INTO Candidatura(EmailUtente, NomeProgetto, NomeProfilo)
+	INSERT INTO Candidatura(EmailUtente, NomeProfilo)
     VALUES (p_email_utente, p_nome_progetto, p_nome_profilo);
-END //
-DELIMITER ;
-*/
-
-/*-----------------------------------------------------------------------------------------------------*/
--- 
-
-/*
--- inserimento di un profilo (solo per progetto software)
-DELIMITER //
-CREATE PROCEDURE sp_inserisci_profilo (
-    IN p_nome VARCHAR(20),
-    IN p_competenza VARCHAR(5),
-    IN p_livello INT,
-    IN p_email_creatore VARCHAR(50)
-)
-BEGIN
-    INSERT INTO Profilo(Nome, Competenza, Livello, EmailUtente)
-    VALUES (p_nome, p_competenza, p_livello, p_email_creatore);
 END //
 DELIMITER ;
 
@@ -537,37 +579,6 @@ BEGIN
       AND Nome = p_nome_profilo;
 END //
 DELIMITER ;
-*/
-
-/*-----------------------------------------------------------------------------------------------------*/
--- 
-
-/**
--- inserimento commento relativo al progetto
-DELIMITER //
-CREATE PROCEDURE sp_commenta_progetto (
-	IN p_testo VARCHAR(255),
-    IN p_email_utente VARCHAR(50),
-    IN p_nome_progetto VARCHAR(20)
-)
-BEGIN
-	INSERT INTO Commento(Data, Testo, EmailUtente, NomeProgetto)
-    VALUES (CURDATE(), p_testo, p_email_utente, p_nome_progetto);
-END //
-DELIMITER ;
-
--- inserimento risposta ad un commento
-DELIMITER //
-CREATE PROCEDURE sp_rispondi_a_commento (
-    IN p_id_commento INT,
-    IN p_email_creatore VARCHAR(50)
-)
-BEGIN
-    INSERT INTO Risposta(Id, EmailUtente)
-    VALUES (p_id_commento, p_email_creatore);
-END //
-DELIMITER ;
-*/
 
 /*-----------------------------------------------------------------------------------------------------*/
 -- STATISTICHE
