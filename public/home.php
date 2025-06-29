@@ -53,6 +53,9 @@ if ($result) {
   <a class="navbar-brand fw-bold text-primary" href="home.php">BOSTARTER</a>
   <div class="d-flex">
     <?php if (isset($_SESSION['email'])): ?>
+      <span class="me-3 align-self-center text-secondary">
+        Benvenuto, <strong><?= htmlspecialchars($_SESSION['utente']['Username']) ?></strong>
+      </span>
       <form method="POST" class="d-inline me-2 align-self-center">
         <button type="submit" name="logout" class="btn btn-link text-decoration-underline py-1 px-0 align-baseline">Esci</button>
       </form>
@@ -65,64 +68,85 @@ if ($result) {
 </nav>
 
 <div class="container mt-5" style="padding-bottom: 120px;">
-  <h2 class="mb-3">Classifica dei creatori più affidabili</h2>
-  <table class="table table-bordered">
-    <thead><tr><th>N°</th><th>Nickname</th><th>Affidabilità</th></tr></thead>
-    <tbody>
-      <?php
-      $i = 1;
-      while ($row = $top_creatori->fetch_assoc()): ?>
-        <tr><td><?= $i ?>.</td><td><?= htmlspecialchars($row['Username']) ?></td><td><?= $row['Affidabilità'] ?>%</td></tr>
-      <?php $i++; endwhile; ?>
-      <?php while ($i <= 3): ?>
-        <tr><td><?= $i ?>.</td><td></td><td></td></tr>
-      <?php $i++; endwhile; ?>
-    </tbody>
-  </table>
+  <?php if (isset($_SESSION['utente'])): ?>
+    <h1 class="mb-4 text-center text-primary fw-bold">
+      Benvenuto, <?= htmlspecialchars($_SESSION['utente']['Username']) ?>
+    </h1>
+  <?php endif; ?>
 
-  <h2 class="mb-3">Progetti vicini al completamento</h2>
-  <table class="table table-bordered">
-    <thead><tr><th>N°</th><th>Nome</th><th>Budget</th><th>Finanziato</th><th>Differenza</th></tr></thead>
-    <tbody>
-      <?php
-      $i = 1;
-      while ($row = $progetti_vicini->fetch_assoc()): ?>
-        <tr>
-          <td><?= $i ?>.</td>
-          <td><?= htmlspecialchars($row['Nome']) ?></td>
-          <td><?= $row['Budget'] ?></td>
-          <td><?= $row['TotaleFinanziato'] ?></td>
-          <td><?= $row['Differenza'] ?></td>
-        </tr>
-      <?php $i++; endwhile; ?>
-      <?php while ($i <= 3): ?>
-        <tr><td><?= $i ?>.</td><td></td><td></td><td></td><td></td></tr>
-      <?php $i++; endwhile; ?>
-    </tbody>
-  </table>
+  <div class="mb-5">
+    <h4 class="mt-5 mb-3 text-secondary">Classifica dei creatori più affidabili</h4>
+    <table class="table table-bordered table-striped table-hover text-center shadow-sm rounded">
+      <thead class="table-primary">
+        <tr><th>Nickname</th><th>Affidabilità</th></tr>
+      </thead>
+      <tbody>
+        <?php
+        while ($row = $top_creatori->fetch_assoc()):
+        ?>
+          <tr><td><?= htmlspecialchars($row['Username']) ?></td><td><?= $row['Affidabilità'] ?>%</td></tr>
+        <?php endwhile; ?>
+      </tbody>
+    </table>
+  </div>
 
-  <h2 class="mb-3">Top Finanziatori</h2>
-  <table class="table table-bordered">
-    <thead><tr><th>N°</th><th>Nickname</th><th>Totale Finanziato</th></tr></thead>
-    <tbody>
-      <?php
-      $i = 1;
-      while ($row = $top_finanziatori->fetch_assoc()): ?>
-        <tr><td><?= $i ?>.</td><td><?= htmlspecialchars($row['Username']) ?></td><td><?= $row['TotaleFinanziato'] ?>€</td></tr>
-      <?php $i++; endwhile; ?>
-      <?php while ($i <= 3): ?>
-        <tr><td><?= $i ?>.</td><td></td><td></td></tr>
-      <?php $i++; endwhile; ?>
-    </tbody>
-  </table>
+  <div class="mb-5">
+    <h4 class="mt-5 mb-3 text-secondary">Progetti vicini al completamento</h4>
+    <table class="table table-bordered table-striped table-hover text-center shadow-sm rounded">
+      <thead class="table-primary">
+        <tr><th>Nome</th><th>Budget</th><th>Finanziato</th><th>Differenza</th></tr>
+      </thead>
+      <tbody>
+        <?php
+        while ($row = $progetti_vicini->fetch_assoc()): ?>
+          <tr>
+            <td><?= htmlspecialchars($row['Nome']) ?></td>
+            <td><?= $row['Budget'] ?></td>
+            <td><?= $row['TotaleFinanziato'] ?></td>
+            <td><?= $row['Differenza'] ?></td>
+          </tr>
+        <?php endwhile; ?>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mb-5">
+    <h4 class="mt-5 mb-3 text-secondary">Top Finanziatori</h4>
+    <table class="table table-bordered table-striped table-hover text-center shadow-sm rounded">
+      <thead class="table-primary">
+        <tr><th>Nickname</th><th>Totale Finanziato</th></tr>
+      </thead>
+      <tbody>
+        <?php
+        while ($row = $top_finanziatori->fetch_assoc()): ?>
+          <tr><td><?= htmlspecialchars($row['Username']) ?></td><td><?= $row['TotaleFinanziato'] ?>€</td></tr>
+        <?php endwhile; ?>
+      </tbody>
+    </table>
+  </div>
 
   <h2 class="mt-5 mb-4">Progetti aperti</h2>
   <div class="row g-4">
     <?php foreach ($progetti as $progetto): ?>
+      <?php
+        $nome_progetto = $progetto['Nome'];
+        $stmt = $conn->prepare("CALL sp_foto_copertina_progetto(?)");
+        $stmt->bind_param("s", $nome_progetto);
+        $stmt->execute();
+        $res_foto = $stmt->get_result();
+        $row_foto = $res_foto->fetch_assoc();
+        $stmt->close();
+        $conn->next_result();
+      ?>
       <div class="col-md-4">
         <div class="card shadow-sm">
+          <?php
+            $titolo = htmlspecialchars($progetto['Titolo'] ?? $progetto['Nome']);
+            $immagine = $row_foto ? $row_foto['Percorso'] : 'images/default.jpg';
+          ?>
+          <img src="<?= $immagine ?>" class="card-img-top" alt="Immagine di <?= $titolo ?>" style="object-fit: cover; height: 200px;">
           <div class="card-body">
-            <h5 class="card-title"><?= htmlspecialchars($progetto['Titolo'] ?? $progetto['Nome']) ?></h5>
+            <h5 class="card-title"><?= $titolo ?></h5>
             <a href="project-info.php?nome=<?= urlencode($progetto['Nome']) ?>" class="btn btn-primary mt-2">Vedi dettagli →</a>
           </div>
         </div>

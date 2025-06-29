@@ -190,6 +190,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finanzia'])) {
         }
     }
 }
+
+// Verifica se l'utente può candidarsi
+$utente_corrente = $_SESSION['email'] ?? '';
+$candidabile = false;
+
+if ($tipo === "software" && $utente_corrente !== '' && $utente_corrente !== $progetto['EmailUtente']) {
+    foreach ($profili as $p) {
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM SkillUtente WHERE EmailUtente = ? AND Nome = ? AND Livello >= ?");
+        $stmt->bind_param("ssi", $utente_corrente, $p['Competenza'], $p['Livello']);
+        $stmt->execute();
+        $stmt->bind_result($esiste);
+        $stmt->fetch();
+        $stmt->close();
+        if ($esiste > 0) {
+            $candidabile = true;
+            break;
+        }
+    }
+}
+
+// Gestione invio candidatura
+$messaggio_candidatura = "";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_candidatura'])) {
+    $id_profilo = (int) ($_POST['profilo'] ?? 0);
+    if ($id_profilo > 0 && $utente_corrente !== '') {
+
+        // Controllo se esiste già candidatura per lo stesso profilo
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM Candidatura WHERE EmailUtente = ? AND IdProfilo = ?");
+        $stmt->bind_param("si", $utente_corrente, $id_profilo);
+        $stmt->execute();
+        $stmt->bind_result($gia_inviata);
+        $stmt->fetch();
+        $stmt->close();
+
+        if ($gia_inviata > 0) {
+            $messaggio_candidatura = "Hai già inviato una candidatura per questo profilo.";
+        } else {
+            $stmt = $conn->prepare("CALL sp_candidati_profilo(?, ?)");
+            $stmt->bind_param("si", $utente_corrente, $id_profilo);
+            $stmt->execute();
+            $stmt->close();
+            $conn->next_result();
+            header("Location: project-info.php?nome=" . urlencode($nome_progetto));
+            exit;
+        }
+    }
+}
+
+// Caricamento candidature (se creatore)
+$candidature = [];
+if ($utente_corrente === $progetto['EmailUtente']) {
+    $stmt = $conn->prepare("CALL sp_visualizza_candidature_progetto(?, ?)");
+    $stmt->bind_param("ss", $utente_corrente, $nome_progetto);
+    $stmt->execute();
+    $ris = $stmt->get_result();
+    while ($row = $ris->fetch_assoc()) {
+        $candidature[] = $row;
+    }
+    $stmt->close();
+    $conn->next_result();
+}
+
+// Caricamento candidature personali (se candidato)
+$candidature_utente = [];
+if ($utente_corrente !== '' && $utente_corrente !== $progetto['EmailUtente']) {
+    $stmt = $conn->prepare("CALL sp_visualizza_candidature_utente(?, ?)");
+    $stmt->bind_param("ss", $utente_corrente, $nome_progetto);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $candidature_utente[] = $row;
+    }
+    $stmt->close();
+    $conn->next_result();
+}
+
+// Gestione accettazione/rifiuto candidatura
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_candidatura'])) {
+    $id = (int) $_POST['id_candidatura'];
+    $nuovo_stato = '';
+
+    if (isset($_POST['accetta_candidatura'])) {
+        $nuovo_stato = 'accettata';
+    } elseif (isset($_POST['rifiuta_candidatura'])) {
+        $nuovo_stato = 'rifiutata';
+    }
+
+    if ($nuovo_stato !== '') {
+        $stmt = $conn->prepare("CALL sp_aggiorna_stato_candidatura(?, ?)");
+        $stmt->bind_param("is", $id, $nuovo_stato);
+        $stmt->execute();
+        $stmt->close();
+        $conn->next_result();
+        header("Location: project-info.php?nome=" . urlencode($nome_progetto));
+        exit;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -347,6 +445,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finanzia'])) {
       </div>
     <?php endif; ?>
 
+    <?php if ($tipo === "software"): ?>
+      <h4 class="mb-2">Candidature</h4>
+      <?php if ($utente_corrente === $progetto['EmailUtente']): ?>
+        <?php if (empty($candidature)): ?>
+          <div class="alert alert-light border">Nessuna candidatura ricevuta.</div>
+        <?php else: ?>
+          <ul class="list-group mb-4">
+            <?php foreach ($candidature as $c): ?>
+              <li class="list-group-item">
+                <strong><?= htmlspecialchars($c['Username']) ?></strong> si è candidato per <strong><?= htmlspecialchars($c['NomeProfilo']) ?></strong>
+                <br><span class="text-muted"><?= htmlspecialchars($c['Competenza']) ?> - Livello <?= $c['Livello'] ?></span>
+                <span class="badge bg-secondary ms-2"><?= htmlspecialchars($c['Stato']) ?></span>
+
+                <?php if ($c['Stato'] === 'in attesa'): ?>
+                  <form method="POST" class="d-inline ms-3">
+                    <input type="hidden" name="id_candidatura" value="<?= $c['IdCandidatura'] ?>">
+                    <button type="submit" name="accetta_candidatura" class="btn btn-sm btn-success">Accetta</button>
+                  </form>
+                  <form method="POST" class="d-inline">
+                    <input type="hidden" name="id_candidatura" value="<?= $c['IdCandidatura'] ?>">
+                    <button type="submit" name="rifiuta_candidatura" class="btn btn-sm btn-danger">Rifiuta</button>
+                  </form>
+                <?php endif; ?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        <?php endif; ?>
+
+      <?php elseif ($candidabile): ?>
+        <?php if ($messaggio_candidatura): ?>
+          <div class="alert alert-warning"><?= htmlspecialchars($messaggio_candidatura) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($candidature_utente)): ?>
+          <div class="mb-3">
+            <h5>Le tue candidature</h5>
+            <ul class="list-group">
+              <?php foreach ($candidature_utente as $c): ?>
+                <li class="list-group-item">
+                  Hai inviato candidatura per <strong><?= htmlspecialchars($c['NomeProfilo']) ?></strong> (<?= $c['Competenza'] ?> - Livello <?= $c['Livello'] ?>)
+                  <span class="badge bg-secondary ms-2"><?= htmlspecialchars($c['Stato']) ?></span>
+                </li>
+              <?php endforeach; ?>
+            </ul>
+          </div>
+        <?php endif; ?>
+        <form method="POST" class="mb-4">
+          <div class="mb-3">
+            <label for="profilo" class="form-label">Seleziona un profilo</label>
+            <select name="profilo" id="profilo" class="form-select" required>
+              <?php foreach ($profili as $p): ?>
+                <option value="<?= htmlspecialchars($p['Id']) ?>">
+                    <?= htmlspecialchars($p['Nome']) ?> - <?= htmlspecialchars($p['Competenza']) ?> (Livello <?= $p['Livello'] ?>)
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <button type="submit" name="invia_candidatura" class="btn btn-primary">Invia candidatura</button>
+        </form>
+      <?php else: ?>
+        <div class="alert alert-warning">Non possiedi le competenze richieste per candidarti a questo progetto.</div>
+      <?php endif; ?>
+    <?php endif; ?>
+  
     <a href="home.php" class="btn btn-secondary">Torna alla Home</a>
   </div>
 </body>

@@ -24,11 +24,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["register"])) {
     $cognome = $_POST["register_cognome"];
     $anno = intval($_POST["register_anno"]);
     $luogo = $_POST["register_luogo"];
-    $skill = $_POST["register_skill"];
-    $livello = intval($_POST["register_livello"]);
 
-    $stmt = $conn->prepare("CALL sp_registra_utente(?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssssissi", $email, $nome, $cognome, $username, $password, $anno, $luogo, $skill, $livello);
+    $stmt = $conn->prepare("CALL sp_registra_utente(?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssssis", $email, $nome, $cognome, $username, $password, $anno, $luogo);
 
     if ($stmt->execute()) {
         $_SESSION['registrazione_successo'] = true;

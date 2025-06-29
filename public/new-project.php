@@ -95,20 +95,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             mkdir($cartella_upload, 0777, true);
         }
 
-        foreach ($_FILES['immagini']['tmp_name'] as $index => $tmp_name) {
-            $nome_originale = basename($_FILES['immagini']['name'][$index]);
-            $percorso_finale = $cartella_upload . time() . "_" . $nome_originale;
+        if (!isset($_FILES['immagini']) || empty($_FILES['immagini']['name'][0])) {
+            $error_message = "Devi caricare almeno un'immagine.";
+        } else {
+            foreach ($_FILES['immagini']['tmp_name'] as $index => $tmp_name) {
+                $nome_originale = basename($_FILES['immagini']['name'][$index]);
+                $percorso_finale = $cartella_upload . time() . "_" . $nome_originale;
 
-            if (move_uploaded_file($tmp_name, $percorso_finale)) {
-                $relative_path = "images/" . basename($percorso_finale);
-                $stmt_foto = $conn->prepare("CALL sp_inserisci_foto(?, ?)");
-                $stmt_foto->bind_param("ss", $relative_path, $nome);
-                $stmt_foto->execute();
-                $stmt_foto->close();
-                $conn->next_result();
+                if (move_uploaded_file($tmp_name, $percorso_finale)) {
+                    $relative_path = "images/" . basename($percorso_finale);
+                    $stmt_foto = $conn->prepare("CALL sp_inserisci_foto(?, ?)");
+                    $stmt_foto->bind_param("ss", $relative_path, $nome);
+                    $stmt_foto->execute();
+                    $stmt_foto->close();
+                    $conn->next_result();
+                }
             }
         }
-
+        
         if (isset($_POST['reward_descrizione']) && isset($_FILES['reward_foto'])) {
           foreach ($_POST['reward_descrizione'] as $i => $descrizione_reward) {
             $nome_file = basename($_FILES['reward_foto']['name'][$i]);
@@ -228,9 +232,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       <label for="nome" class="form-label">Titolo del progetto</label>
       <input type="text" class="form-control" id="nome" name="nome" required maxlength="20">
     </div>
+    <?php $oggi = date("Y-m-d"); ?>
     <div class="mb-3">
       <label for="data_inserimento" class="form-label">Data di inserimento</label>
-      <input type="date" class="form-control" id="data_inserimento" name="data_inserimento" required>
+      <input type="date" class="form-control" id="data_inserimento" name="data_inserimento" value="<?= $oggi ?>" readonly>
     </div>
     <div class="mb-3">
       <label for="budget" class="form-label">Budget (in €)</label>
@@ -265,7 +270,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <h4>Immagini del progetto</h4>
     <div class="mb-3">
       <label for="immagini" class="form-label">Carica immagini (puoi selezionare più file)</label>
-      <input type="file" class="form-control" name="immagini[]" id="immagini" accept="image/*" multiple>
+      <input type="file" class="form-control" name="immagini[]" id="immagini" accept="image/*" multiple required>
     </div>
 
     <hr>
