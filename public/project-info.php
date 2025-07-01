@@ -145,12 +145,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_risposta'])) {
 
     if ($email === $progetto['EmailUtente']) {
         // Verifica se già esiste una risposta per questo commento
-        $stmt = $conn->prepare("SELECT COUNT(*) FROM Risposta WHERE IdCommento = ?");
+        $risposte_esistenti = -1;
+        $stmt = $conn->prepare("CALL sp_verifica_risposta_commento(?, @esiste)");
         $stmt->bind_param("i", $id_commento);
         $stmt->execute();
-        $stmt->bind_result($risposte_esistenti);
-        $stmt->fetch();
         $stmt->close();
+        $conn->next_result();
+
+        $res = $conn->query("SELECT @esiste AS esiste");
+        if ($res) {
+            $row = $res->fetch_assoc();
+            $risposte_esistenti = $row['esiste'];
+        }
 
         if ($risposte_esistenti == 0) {
             $stmt = $conn->prepare("CALL sp_rispondi_a_commento(?, ?, ?)");
@@ -174,8 +180,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finanzia'])) {
     $codice_reward = $_POST['reward'] !== "" ? (int) $_POST['reward'] : NULL;
     $email_utente = $_SESSION['email'] ?? '';
 
-    if ($email_utente === '' || $email_utente === $progetto['EmailUtente']) {
-        $messaggio_errore = "Non puoi finanziare se non sei autenticato o sei il creatore del progetto.";
+    if ($email_utente === '') {
+        $messaggio_errore = "Non puoi finanziare se non sei autenticato";
     } else {
         try {
             $stmt = $conn->prepare("CALL sp_finanzia_progetto(?, ?, ?, ?)");
@@ -183,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finanzia'])) {
             $stmt->execute();
             $messaggio_successo = "Finanziamento registrato con successo!";
         } catch (mysqli_sql_exception $e) {
-            $messaggio_errore = "Errore: " . $e->getMessage();
+            $messaggio_errore = "Impossibile inserire più di un finanziamento nella stessa data";
         } finally {
             if (isset($stmt)) $stmt->close();
             $conn->next_result();
@@ -197,15 +203,20 @@ $candidabile = false;
 
 if ($tipo === "software" && $utente_corrente !== '' && $utente_corrente !== $progetto['EmailUtente']) {
     foreach ($profili as $p) {
-        $stmt = $conn->prepare("SELECT COUNT(*) FROM SkillUtente WHERE EmailUtente = ? AND Nome = ? AND Livello >= ?");
+        $esiste = 0;
+        $stmt = $conn->prepare("CALL sp_utente_ha_skill(?, ?, ?, @valido)");
         $stmt->bind_param("ssi", $utente_corrente, $p['Competenza'], $p['Livello']);
         $stmt->execute();
-        $stmt->bind_result($esiste);
-        $stmt->fetch();
         $stmt->close();
-        if ($esiste > 0) {
-            $candidabile = true;
-            break;
+        $conn->next_result();
+
+        $res = $conn->query("SELECT @valido AS valido");
+        if ($res) {
+            $row = $res->fetch_assoc();
+            if ($row['valido'] > 0) {
+                $candidabile = true;
+                break;
+            }
         }
     }
 }
@@ -218,23 +229,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_candidatura']))
     if ($id_profilo > 0 && $utente_corrente !== '') {
 
         // Controllo se esiste già candidatura per lo stesso profilo
-        $stmt = $conn->prepare("SELECT COUNT(*) FROM Candidatura WHERE EmailUtente = ? AND IdProfilo = ?");
+        $gia_inviata = 0;
+        $stmt = $conn->prepare("CALL sp_verifica_candidatura(?, ?, @gia)");
         $stmt->bind_param("si", $utente_corrente, $id_profilo);
         $stmt->execute();
-        $stmt->bind_result($gia_inviata);
-        $stmt->fetch();
         $stmt->close();
+        $conn->next_result();
 
-        if ($gia_inviata > 0) {
-            $messaggio_candidatura = "Hai già inviato una candidatura per questo profilo.";
-        } else {
-            $stmt = $conn->prepare("CALL sp_candidati_profilo(?, ?)");
-            $stmt->bind_param("si", $utente_corrente, $id_profilo);
-            $stmt->execute();
-            $stmt->close();
-            $conn->next_result();
-            header("Location: project-info.php?nome=" . urlencode($nome_progetto));
-            exit;
+        $res = $conn->query("SELECT @gia AS gia");
+        if ($res) {
+            $row = $res->fetch_assoc();
+            if ($row['gia'] > 0) {
+                $messaggio_candidatura = "Hai già inviato una candidatura per questo profilo.";
+            } else {
+                // Inserisci candidatura
+                $stmt = $conn->prepare("CALL sp_candidati_profilo(?, ?)");
+                $stmt->bind_param("si", $utente_corrente, $id_profilo);
+                $stmt->execute();
+                $stmt->close();
+                $conn->next_result();
+                header("Location: project-info.php?nome=" . urlencode($nome_progetto));
+                exit;
+            }
         }
     }
 }
@@ -412,7 +428,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_candidatura'])) {
       </form>
     <?php endif; ?>
 
-    <?php if (isset($_SESSION['email']) && $_SESSION['email'] !== $progetto['EmailUtente']): ?>
+    <?php if (isset($_SESSION['email'])): ?>
       <div class="card mb-5 shadow">
         <div class="card-body">
           <h4 class="mb-3">Sostieni questo progetto</h4>

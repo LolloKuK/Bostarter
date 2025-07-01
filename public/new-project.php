@@ -22,12 +22,16 @@ if ($conn->connect_error) {
 
 // Recupero competenze per il menu a tendina
 $lista_competenze = [];
-$res = $conn->query("SELECT Nome FROM Competenza ORDER BY Nome ASC");
+$stmt = $conn->prepare("CALL sp_visualizza_competenze()");
+$stmt->execute();
+$res = $stmt->get_result();
 if ($res) {
     while ($row = $res->fetch_assoc()) {
         $lista_competenze[] = $row['Nome'];
     }
 }
+$stmt->close();
+$conn->next_result();
 
 $success_message = "";
 $error_message = "";
@@ -42,12 +46,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email_creatore = $_SESSION['email'];
 
     // Controlla se esiste già un progetto con lo stesso nome
-    $check = $conn->prepare("SELECT COUNT(*) FROM Progetto WHERE Nome = ?");
-    $check->bind_param("s", $nome);
-    $check->execute();
-    $check->bind_result($count);
-    $check->fetch();
-    $check->close();
+    $count = -1;
+    $stmt = $conn->prepare("CALL sp_conta_progetto_nome(?, @count_out)");
+    $stmt->bind_param("s", $nome);
+    $stmt->execute();
+    $stmt->close();
+    $conn->next_result();
+
+    $result = $conn->query("SELECT @count_out AS count");
+    if ($result) {
+        $row = $result->fetch_assoc();
+        $count = $row['count'];
+    }
 
     if ($count > 0) {
         $error_message = "Esiste già un progetto con questo nome. Scegli un nome diverso.";

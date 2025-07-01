@@ -22,13 +22,17 @@ if ($conn->connect_error) {
 }
 
 // Recupera competenze disponibili dalla tabella Competenza
-$lista_competenze = [];
-$res = $conn->query("SELECT Nome FROM Competenza ORDER BY Nome ASC");
+$$lista_competenze = [];
+$stmt = $conn->prepare("CALL sp_visualizza_competenze()");
+$stmt->execute();
+$res = $stmt->get_result();
 if ($res) {
     while ($row = $res->fetch_assoc()) {
         $lista_competenze[] = $row['Nome'];
     }
 }
+$stmt->close();
+$conn->next_result();
 
 $esito = "";
 
@@ -53,14 +57,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_skill']) && i
 
 // Recupero skill già associate all'utente
 $skill_utente = [];
-$sql = $conn->prepare("SELECT Nome, Livello FROM SkillUtente WHERE EmailUtente = ?");
-$sql->bind_param("s", $_SESSION['email']);
-$sql->execute();
-$result = $sql->get_result();
-while ($row = $result->fetch_assoc()) {
+$stmt = $conn->prepare("CALL sp_visualizza_skill_utente(?)");
+$stmt->bind_param("s", $_SESSION['email']);
+$stmt->execute();
+$res = $stmt->get_result();
+while ($row = $res->fetch_assoc()) {
     $skill_utente[] = $row;
 }
-$sql->close();
+$stmt->close();
+$conn->next_result();
 ?>
 
 <!DOCTYPE html>

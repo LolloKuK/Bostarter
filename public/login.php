@@ -26,7 +26,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["register"])) {
     $luogo = $_POST["register_luogo"];
 
     $stmt = $conn->prepare("CALL sp_registra_utente(?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssssis", $email, $nome, $cognome, $username, $password, $anno, $luogo);
+    $stmt->bind_param("sssssis", $username, $email, $password, $nome, $cognome, $anno, $luogo);
 
     if ($stmt->execute()) {
         $_SESSION['registrazione_successo'] = true;

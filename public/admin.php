@@ -55,12 +55,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["elimina_competenza"])
 
 // Recupero competenze
 $competenze = [];
-$res = $conn->query("SELECT Nome FROM Competenza");
+$stmt = $conn->prepare("CALL sp_visualizza_competenze()");
+$stmt->execute();
+$res = $stmt->get_result();
 if ($res) {
     while ($row = $res->fetch_assoc()) {
         $competenze[] = $row['Nome'];
     }
 }
+$stmt->close();
+$conn->next_result();
 ?>
 
 <!DOCTYPE html>

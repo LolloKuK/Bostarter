@@ -223,7 +223,17 @@ DELIMITER ;
 /*-----------------------------------------------------------------------------------------------------*/
 -- insert-skill.php
 
--- inserisci skill nel curriculum
+-- Visualizza skill utente
+DELIMITER //
+CREATE PROCEDURE sp_visualizza_skill_utente(IN p_email VARCHAR(50))
+BEGIN
+    SELECT Nome, Livello
+    FROM SkillUtente
+    WHERE EmailUtente = p_email;
+END //
+DELIMITER ;
+
+-- Inserisci skill nel curriculum
 DELIMITER //
 CREATE PROCEDURE sp_aggiungi_o_modifica_skill(
     IN p_email VARCHAR(50),
@@ -250,7 +260,15 @@ DELIMITER ;
 /*-----------------------------------------------------------------------------------------------------*/
 -- admin.php
 
--- inserimento nuova competenza
+-- Visualizza competenze
+DELIMITER //
+CREATE PROCEDURE sp_visualizza_competenze()
+BEGIN
+    SELECT Nome FROM Competenza ORDER BY Nome ASC;
+END //
+DELIMITER ;
+
+-- Inserimento nuova competenza
 DELIMITER //
 CREATE PROCEDURE sp_aggiungi_competenza(IN p_nome VARCHAR(20))
 BEGIN
@@ -258,7 +276,7 @@ BEGIN
 END //
 DELIMITER ;
 
--- eliminazione competenza
+-- Eliminazione competenza
 DELIMITER //
 CREATE PROCEDURE sp_elimina_competenza(IN p_nome VARCHAR(20))
 BEGIN
@@ -268,6 +286,16 @@ DELIMITER ;
 
 /*-----------------------------------------------------------------------------------------------------*/
 -- new-project.php
+
+-- Controllo se esiste già un progetto con lo stesso nome
+DELIMITER //
+CREATE PROCEDURE sp_conta_progetto_nome(IN p_nome VARCHAR(50), OUT p_count INT)
+BEGIN
+    SELECT COUNT(*) INTO p_count
+    FROM Progetto
+    WHERE Nome = p_nome;
+END //
+DELIMITER ;
 
 -- Inserimento progetto hardware
 DELIMITER //
@@ -511,6 +539,16 @@ BEGIN
 END //
 DELIMITER ;
 
+-- Verifica se esiste un commento per il progetto
+DELIMITER //
+CREATE PROCEDURE sp_verifica_risposta_commento(IN p_id INT, OUT p_esiste INT)
+BEGIN
+    SELECT COUNT(*) INTO p_esiste
+    FROM Risposta
+    WHERE IdCommento = p_id;
+END //
+DELIMITER ;
+
 -- Inserimento commento relativo al progetto
 DELIMITER //
 CREATE PROCEDURE sp_commenta_progetto (
@@ -559,6 +597,26 @@ BEGIN
     LEFT JOIN Utente ur ON r.EmailUtente = ur.Email
     WHERE c.NomeProgetto = p_nome_progetto
     ORDER BY c.Data ASC, r.Id ASC;
+END //
+DELIMITER ;
+
+-- Verifica se l'utente ha una skill con un certo livello
+DELIMITER //
+CREATE PROCEDURE sp_utente_ha_skill(IN p_email VARCHAR(50), IN p_nome_skill VARCHAR(20), IN p_livello INT, OUT p_valido INT)
+BEGIN
+    SELECT COUNT(*) INTO p_valido
+    FROM SkillUtente
+    WHERE EmailUtente = p_email AND Nome = p_nome_skill AND Livello >= p_livello;
+END //
+DELIMITER ;
+
+-- Verifica se l'utente ha una candidatura per un profilo
+DELIMITER //
+CREATE PROCEDURE sp_verifica_candidatura(IN p_email VARCHAR(50), IN p_id_profilo INT, OUT p_gia_inviata INT)
+BEGIN
+    SELECT COUNT(*) INTO p_gia_inviata
+    FROM Candidatura
+    WHERE EmailUtente = p_email AND IdProfilo = p_id_profilo;
 END //
 DELIMITER ;
 
