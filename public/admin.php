@@ -5,7 +5,18 @@ error_reporting(E_ALL);
 
 session_start();
 
+require_once 'log-mongo.php';
+
 if (isset($_POST['logout'])) {
+    // Log logout admin
+    if (isset($_SESSION['admin_email'])) {
+        scriviLogLocale(
+            "logout",
+            $_SESSION['admin_email'],
+            "Admin",
+            ["azione" => "Logout admin"]
+        );
+    }
     session_unset();
     session_destroy();
     header("Location: login.php");
@@ -36,6 +47,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["aggiungi_competenza"]
         $stmt->execute();
         $stmt->close();
         $conn->next_result();
+
+        // Log aggiunta competenza
+        scriviLogLocale(
+            "aggiungi_competenza",
+            $_SESSION['admin_email'],
+            "Admin",
+            ["competenza" => $nome]
+        );
     }
     header("Location: admin.php");
     exit();
@@ -49,6 +68,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["elimina_competenza"])
     $stmt->execute();
     $stmt->close();
     $conn->next_result();
+
+    // Log eliminazione competenza
+    scriviLogLocale(
+        "elimina_competenza",
+        $_SESSION['admin_email'],
+        "Admin",
+        ["competenza" => $nome]
+    );
+
     header("Location: admin.php");
     exit();
 }

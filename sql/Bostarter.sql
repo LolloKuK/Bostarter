@@ -862,3 +862,88 @@ INSERT INTO Competenza (Nome) VALUES
 ('Data analysis'),
 ('Leadership'),
 ('Teamwork');
+
+-- UTENTI
+CALL sp_registra_utente('MarioR', 'mario@rossi.it', 'pw123', 'Mario', 'Rossi', 1990, 'Roma');
+CALL sp_registra_utente('AnnaB', 'anna@bianchi.it', 'pw456', 'Anna', 'Bianchi', 1995, 'Milano');
+CALL sp_registra_utente('CarloP', 'carlo@pesce.it', 'pw789', 'Carlo', 'Pesce', 2002, 'Rovigo');
+CALL sp_registra_utente('Vane', 'vanessa@franchi.it', 'pw101', 'Vanessa', 'Franchi', 2000, 'MilRiminiano');
+
+-- COMPETENZE UTENTI
+CALL sp_aggiungi_o_modifica_skill('mario@rossi.it', 'Java', 4);
+CALL sp_aggiungi_o_modifica_skill('anna@bianchi.it', 'Web Dev.', 3);
+CALL sp_aggiungi_o_modifica_skill('mario@rossi.it', 'Teamwork', 5);
+CALL sp_aggiungi_o_modifica_skill('mario@rossi.it', 'Leadership', 3);
+CALL sp_aggiungi_o_modifica_skill('anna@bianchi.it', 'Java', 2);
+CALL sp_aggiungi_o_modifica_skill('anna@bianchi.it', 'Sql', 4);
+CALL sp_aggiungi_o_modifica_skill('carlo@pesce.it', 'Maintenance Hw', 3);
+CALL sp_aggiungi_o_modifica_skill('carlo@pesce.it', 'Hw design', 4);
+CALL sp_aggiungi_o_modifica_skill('vanessa@franchi.it', 'Web Dev.', 5);
+CALL sp_aggiungi_o_modifica_skill('vanessa@franchi.it', 'Teamwork', 4);
+
+-- PROGETTI SOFTWARE
+CALL sp_inserisci_progetto_software('SmartApp', '2025-07-01', 5000, 'Un\'app intelligente.', '2025-07-31', 'mario@rossi.it');
+CALL sp_inserisci_profilo('Frontend Dev', 'Web Dev.', 3, 'SmartApp');
+CALL sp_inserisci_profilo('Backend Dev', 'Java', 4, 'SmartApp');
+CALL sp_inserisci_profilo('Web Designer', 'Web Dev.', 2, 'SmartApp');
+CALL sp_inserisci_profilo('Data Analyst', 'Data analysis', 3, 'SmartApp');
+CALL sp_inserisci_progetto_software('EcoPlanner', '2025-07-01', 6000, 'App per pianificare la sostenibilità quotidiana.', '2025-08-01', 'vanessa@franchi.it');
+CALL sp_inserisci_profilo('Sviluppatore Mobile', 'Java', 4, 'EcoPlanner');
+CALL sp_inserisci_profilo('Web Specialist', 'Web Dev.', 5, 'EcoPlanner');
+
+-- PROGETTI HARDWARE
+CALL sp_inserisci_progetto_hardware('ArduinoHome', '2025-07-01', 10000, 'Sistema domotico su Arduino.', '2025-07-31', 'anna@bianchi.it');
+CALL sp_inserisci_componente('Sensore IR', 15, 'Sensore movimento', 3, 'ArduinoHome');
+CALL sp_inserisci_componente('LED Strip', 10, 'Illuminazione RGB', 5, 'ArduinoHome');
+CALL sp_inserisci_componente('Scheda Relay', 8, 'Controllo dispositivi AC', 4, 'ArduinoHome');
+CALL sp_inserisci_componente('Modulo WiFi ESP8266', 12, 'Connessione wireless', 2, 'ArduinoHome');
+CALL sp_inserisci_progetto_hardware('FishBot', '2025-07-01', 8000, 'Un robot acquatico intelligente.', '2025-08-01', 'carlo@pesce.it');
+CALL sp_inserisci_componente('Propulsore Acqua', 50, 'Sistema di movimento idrodinamico', 2, 'FishBot');
+CALL sp_inserisci_componente('Sensore Temperatura', 15, 'Controllo ambientale', 4, 'FishBot');
+
+-- FOTO PROGETTI
+CALL sp_inserisci_foto('images/random2.jpg', 'SmartApp');
+CALL sp_inserisci_foto('images/random4.jpg', 'ArduinoHome');
+CALL sp_inserisci_foto('images/dadi.jpg', 'ArduinoHome');
+CALL sp_inserisci_foto('images/random1.jpg', 'EcoPlanner');
+CALL sp_inserisci_foto('images/random.jpg', 'EcoPlanner');
+CALL sp_inserisci_foto('images/random5.jpg', 'FishBot');
+
+-- REWARD PROGETTI
+CALL sp_inserisci_reward('T-shirt SmartApp', 'images/maglia.png', 'SmartApp');
+CALL sp_inserisci_reward('Arduino Kit Base', 'images/random5.jpg', 'ArduinoHome');
+CALL sp_inserisci_reward('Guanti Premium', 'images/guanti.png', 'EcoPlanner');
+CALL sp_inserisci_reward('FishBot Pro', 'images/fish-bot.jpg', 'FishBot');
+
+-- FINANZIAMENTI PROGETTI
+CALL sp_finanzia_progetto(200, 'anna@bianchi.it', 'SmartApp', 1);
+CALL sp_finanzia_progetto(300, 'mario@rossi.it', 'ArduinoHome', 2);
+CALL sp_finanzia_progetto(350, 'carlo@pesce.it', 'EcoPlanner', 3);
+CALL sp_finanzia_progetto(500, 'vanessa@franchi.it', 'FishBot', 4);
+
+-- COMMENTI
+CALL sp_commenta_progetto('Progetto interessante!', 'anna@bianchi.it', 'SmartApp');
+CALL sp_commenta_progetto('Ottima idea.', 'mario@rossi.it', 'ArduinoHome');
+CALL sp_commenta_progetto('Ci lavorerei volentieri!', 'mario@rossi.it', 'SmartApp');
+CALL sp_commenta_progetto('Serve una hardware particolare?', 'anna@bianchi.it', 'SmartApp');
+CALL sp_commenta_progetto('Davvero innovativo!', 'carlo@pesce.it', 'EcoPlanner');
+CALL sp_commenta_progetto('Lo vorrei testare!', 'vanessa@franchi.it', 'FishBot');
+
+-- RISPOSTE AI COMMENTI
+CALL sp_rispondi_a_commento(3, 'mario@rossi.it', 'Certo, ti contatto!');
+CALL sp_rispondi_a_commento(4, 'anna@bianchi.it', 'Sì, visita il nostro sito');
+CALL sp_rispondi_a_commento(5, 'vanessa@franchi.it', 'Scrivimi e te lo mostro in anteprima!');
+CALL sp_rispondi_a_commento(6, 'carlo@pesce.it', 'Volentieri, ti invio i file.');
+
+-- CANDIDATURE
+CALL sp_candidati_profilo('anna@bianchi.it', 1);
+CALL sp_candidati_profilo('mario@rossi.it', 2);
+CALL sp_candidati_profilo('anna@bianchi.it', 3);
+CALL sp_candidati_profilo('mario@rossi.it', 4);
+CALL sp_candidati_profilo('carlo@pesce.it', 5);
+CALL sp_candidati_profilo('mario@rossi.it', 6);
+
+-- ACCETTAZIONE CANDIDATURA
+CALL sp_aggiorna_stato_candidatura(1, 'accettata');
+CALL sp_aggiorna_stato_candidatura(4, 'rifiutata');
+CALL sp_aggiorna_stato_candidatura(5, 'accettata');

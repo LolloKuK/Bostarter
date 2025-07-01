@@ -6,6 +6,8 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+require_once 'log-mongo.php';
+
 if (!isset($_SESSION['email'])) {
     header("Location: login.php");
     exit();
@@ -22,7 +24,7 @@ if ($conn->connect_error) {
 }
 
 // Recupera competenze disponibili dalla tabella Competenza
-$$lista_competenze = [];
+$lista_competenze = [];
 $stmt = $conn->prepare("CALL sp_visualizza_competenze()");
 $stmt->execute();
 $res = $stmt->get_result();
@@ -47,8 +49,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register_skill']) && i
 
     if ($stmt->execute()) {
         $esito = '<div class="alert alert-success mt-3">Skill inserita o aggiornata con successo!</div>';
+        // Log successo inserimento skill
+        scriviLogLocale(
+            "skill_inserita_aggiornata",
+            $email,
+            "SkillUtente",
+            ["skill" => $skill, "livello" => $livello, "esito" => "successo"]
+        );
     } else {
         $esito = '<div class="alert alert-danger mt-3">Errore nell\'inserimento della skill.</div>';
+        // Log errore inserimento skill
+        scriviLogLocale(
+            "skill_inserita_aggiornata",
+            $email,
+            "SkillUtente",
+            ["skill" => $skill, "livello" => $livello, "esito" => "errore", "error_msg" => $stmt->error]
+        );
     }
 
     $stmt->close();

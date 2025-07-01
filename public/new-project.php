@@ -5,6 +5,8 @@ error_reporting(E_ALL);
 
 session_start();
 
+require_once 'log-mongo.php';
+
 if (!isset($_SESSION['email'])) {
     header("Location: login.php");
     exit();
@@ -61,9 +63,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($count > 0) {
         $error_message = "Esiste già un progetto con questo nome. Scegli un nome diverso.";
+
+        scriviLogLocale(
+            "progetto_inserimento_fallito",
+            $email_creatore,
+            "Progetto",
+            ["nome" => $nome, "motivo" => "nome duplicato"]
+        );
     } else {
-        // Qui tutto il codice che già avevi (con prepare, execute, immagini, ecc.)
-        // A partire da:
+
         if ($tipo_progetto === "hardware") {
             $stmt = $conn->prepare("CALL sp_inserisci_progetto_hardware(?, ?, ?, ?, ?, ?)");
         } else {
@@ -73,80 +81,102 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $stmt->bind_param("ssisss", $nome, $data_inserimento, $budget, $descrizione, $data_limite, $email_creatore);
 
         if ($stmt->execute()) {
-        $conn->next_result();
+            $conn->next_result();
 
-        if ($tipo_progetto === "hardware" && isset($_POST['componenti_nome'])) {
-            foreach ($_POST['componenti_nome'] as $i => $nome_componente) {
-                $prezzo = $_POST['componenti_prezzo'][$i];
-                $descr = $_POST['componenti_descrizione'][$i];
-                $quantita = $_POST['componenti_quantita'][$i];
+            if ($tipo_progetto === "hardware" && isset($_POST['componenti_nome'])) {
+                foreach ($_POST['componenti_nome'] as $i => $nome_componente) {
+                    $prezzo = $_POST['componenti_prezzo'][$i];
+                    $descr = $_POST['componenti_descrizione'][$i];
+                    $quantita = $_POST['componenti_quantita'][$i];
 
-                $stmt_comp = $conn->prepare("CALL sp_inserisci_componente(?, ?, ?, ?, ?)");
-                $stmt_comp->bind_param("sisis", $nome_componente, $prezzo, $descr, $quantita, $nome);
-                $stmt_comp->execute();
-                $stmt_comp->close();
-                $conn->next_result();
-            }
-        } elseif ($tipo_progetto === "software" && isset($_POST['profili_nome'])) {
-            foreach ($_POST['profili_nome'] as $i => $nome_profilo) {
-                $competenza = $_POST['profili_competenza'][$i];
-                $livello = $_POST['profili_livello'][$i];
+                    $stmt_comp = $conn->prepare("CALL sp_inserisci_componente(?, ?, ?, ?, ?)");
+                    $stmt_comp->bind_param("sisis", $nome_componente, $prezzo, $descr, $quantita, $nome);
+                    $stmt_comp->execute();
+                    $stmt_comp->close();
+                    $conn->next_result();
+                }
+            } elseif ($tipo_progetto === "software" && isset($_POST['profili_nome'])) {
+                foreach ($_POST['profili_nome'] as $i => $nome_profilo) {
+                    $competenza = $_POST['profili_competenza'][$i];
+                    $livello = $_POST['profili_livello'][$i];
 
-                $stmt_prof = $conn->prepare("CALL sp_inserisci_profilo(?, ?, ?, ?)");
-                $stmt_prof->bind_param("ssis", $nome_profilo, $competenza, $livello, $nome);
-                $stmt_prof->execute();
-                $stmt_prof->close();
-                $conn->next_result();
-            }
-        }
-
-        $cartella_upload = "images/";
-        if (!is_dir($cartella_upload)) {
-            mkdir($cartella_upload, 0777, true);
-        }
-
-        if (!isset($_FILES['immagini']) || empty($_FILES['immagini']['name'][0])) {
-            $error_message = "Devi caricare almeno un'immagine.";
-        } else {
-            foreach ($_FILES['immagini']['tmp_name'] as $index => $tmp_name) {
-                $nome_originale = basename($_FILES['immagini']['name'][$index]);
-                $percorso_finale = $cartella_upload . time() . "_" . $nome_originale;
-
-                if (move_uploaded_file($tmp_name, $percorso_finale)) {
-                    $relative_path = "images/" . basename($percorso_finale);
-                    $stmt_foto = $conn->prepare("CALL sp_inserisci_foto(?, ?)");
-                    $stmt_foto->bind_param("ss", $relative_path, $nome);
-                    $stmt_foto->execute();
-                    $stmt_foto->close();
+                    $stmt_prof = $conn->prepare("CALL sp_inserisci_profilo(?, ?, ?, ?)");
+                    $stmt_prof->bind_param("ssis", $nome_profilo, $competenza, $livello, $nome);
+                    $stmt_prof->execute();
+                    $stmt_prof->close();
                     $conn->next_result();
                 }
             }
-        }
-        
-        if (isset($_POST['reward_descrizione']) && isset($_FILES['reward_foto'])) {
-          foreach ($_POST['reward_descrizione'] as $i => $descrizione_reward) {
-            $nome_file = basename($_FILES['reward_foto']['name'][$i]);
-            $tmp_name = $_FILES['reward_foto']['tmp_name'][$i];
-            $path_finale = "images/" . time() . "_" . $nome_file;
 
-            if (move_uploaded_file($tmp_name, $path_finale)) {
-              $relative_path = "images/" . basename($path_finale);
-
-              $stmt_reward = $conn->prepare("CALL sp_inserisci_reward(?, ?, ?)");
-              $stmt_reward->bind_param("sss", $descrizione_reward, $relative_path, $nome);
-              $stmt_reward->execute();
-              $stmt_reward->close();
-              $conn->next_result();
+            $cartella_upload = "images/";
+            if (!is_dir($cartella_upload)) {
+                mkdir($cartella_upload, 0777, true);
             }
-          }
+
+            if (!isset($_FILES['immagini']) || empty($_FILES['immagini']['name'][0])) {
+                $error_message = "Devi caricare almeno un'immagine.";
+
+                scriviLogLocale(
+                    "progetto_inserimento_fallito",
+                    $email_creatore,
+                    "Progetto",
+                    ["nome" => $nome, "motivo" => "nessuna immagine caricata"]
+                );
+            } else {
+                foreach ($_FILES['immagini']['tmp_name'] as $index => $tmp_name) {
+                    $nome_originale = basename($_FILES['immagini']['name'][$index]);
+                    $percorso_finale = $cartella_upload . time() . "_" . $nome_originale;
+
+                    if (move_uploaded_file($tmp_name, $percorso_finale)) {
+                        $relative_path = "images/" . basename($percorso_finale);
+                        $stmt_foto = $conn->prepare("CALL sp_inserisci_foto(?, ?)");
+                        $stmt_foto->bind_param("ss", $relative_path, $nome);
+                        $stmt_foto->execute();
+                        $stmt_foto->close();
+                        $conn->next_result();
+                    }
+                }
+            }
+
+            if (isset($_POST['reward_descrizione']) && isset($_FILES['reward_foto'])) {
+                foreach ($_POST['reward_descrizione'] as $i => $descrizione_reward) {
+                    $nome_file = basename($_FILES['reward_foto']['name'][$i]);
+                    $tmp_name = $_FILES['reward_foto']['tmp_name'][$i];
+                    $path_finale = "images/" . time() . "_" . $nome_file;
+
+                    if (move_uploaded_file($tmp_name, $path_finale)) {
+                        $relative_path = "images/" . basename($path_finale);
+
+                        $stmt_reward = $conn->prepare("CALL sp_inserisci_reward(?, ?, ?)");
+                        $stmt_reward->bind_param("sss", $descrizione_reward, $relative_path, $nome);
+                        $stmt_reward->execute();
+                        $stmt_reward->close();
+                        $conn->next_result();
+                    }
+                }
+            }
+
+            $success_message = "Progetto pubblicato con successo!";
+
+            scriviLogLocale(
+                "progetto_inserito",
+                $email_creatore,
+                "Progetto",
+                ["nome" => $nome, "tipo" => $tipo_progetto]
+            );
+
+        } else {
+            $error_message = "Errore: " . $conn->error;
+
+            scriviLogLocale(
+                "progetto_inserimento_fallito",
+                $email_creatore,
+                "Progetto",
+                ["nome" => $nome, "motivo" => $conn->error]
+            );
         }
 
-        $success_message = "Progetto pubblicato con successo!";
-    } else {
-        $error_message = "Errore: " . $conn->error;
-    }
-
-    $stmt->close();
+        $stmt->close();
     }
 }
 ?>

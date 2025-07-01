@@ -4,6 +4,8 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 session_start();
 
+require_once 'log-mongo.php';
+
 if (!isset($_GET['nome'])) {
     die("Nessun progetto specificato.");
 }
@@ -132,6 +134,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_commento'])) {
         $stmt->execute();
         $stmt->close();
         $conn->next_result();
+
+        scriviLogLocale(
+            "commento_inserito",
+            $email,
+            "Progetto",
+            ["nome_progetto" => $nome_progetto, "testo_commento" => $testo_commento]
+        );
+
         header("Location: project-info.php?nome=" . urlencode($nome_progetto));
         exit;
     }
@@ -164,6 +174,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_risposta'])) {
             $stmt->execute();
             $stmt->close();
             $conn->next_result();
+
+            scriviLogLocale(
+                "risposta_commento_inserita",
+                $email,
+                "Progetto",
+                ["nome_progetto" => $nome_progetto, "id_commento" => $id_commento, "testo_risposta" => $testo_risposta]
+            );
         }
 
         header("Location: project-info.php?nome=" . urlencode($nome_progetto));
@@ -171,7 +188,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_risposta'])) {
     }
 }
 
-// GESTIONE FINANZIAMENTO
+// Gestione finanziamento
 $messaggio_successo = "";
 $messaggio_errore = "";
 
@@ -187,9 +204,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finanzia'])) {
             $stmt = $conn->prepare("CALL sp_finanzia_progetto(?, ?, ?, ?)");
             $stmt->bind_param("issi", $importo, $email_utente, $nome_progetto, $codice_reward);
             $stmt->execute();
+
+            scriviLogLocale(
+                "finanziamento_inserito",
+                $email_utente,
+                "Progetto",
+                ["nome_progetto" => $nome_progetto, "importo" => $importo, "codice_reward" => $codice_reward]
+            );
+
             $messaggio_successo = "Finanziamento registrato con successo!";
         } catch (mysqli_sql_exception $e) {
             $messaggio_errore = "Impossibile inserire più di un finanziamento nella stessa data";
+
+            scriviLogLocale(
+                "finanziamento_fallito",
+                $email_utente,
+                "Progetto",
+                ["nome_progetto" => $nome_progetto, "importo" => $importo, "errore" => $e->getMessage()]
+            );
         } finally {
             if (isset($stmt)) $stmt->close();
             $conn->next_result();
@@ -226,6 +258,8 @@ $messaggio_candidatura = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_candidatura'])) {
     $id_profilo = (int) ($_POST['profilo'] ?? 0);
+    $utente_corrente = $_SESSION['email'] ?? '';
+
     if ($id_profilo > 0 && $utente_corrente !== '') {
 
         // Controllo se esiste già candidatura per lo stesso profilo
@@ -241,6 +275,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_candidatura']))
             $row = $res->fetch_assoc();
             if ($row['gia'] > 0) {
                 $messaggio_candidatura = "Hai già inviato una candidatura per questo profilo.";
+
+                scriviLogLocale(
+                    "candidatura_fallita",
+                    $utente_corrente,
+                    "Progetto",
+                    ["nome_progetto" => $nome_progetto, "id_profilo" => $id_profilo, "motivo" => "già candidata"]
+                );
             } else {
                 // Inserisci candidatura
                 $stmt = $conn->prepare("CALL sp_candidati_profilo(?, ?)");
@@ -248,6 +289,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['invia_candidatura']))
                 $stmt->execute();
                 $stmt->close();
                 $conn->next_result();
+
+                scriviLogLocale(
+                    "candidatura_inviata",
+                    $utente_corrente,
+                    "Progetto",
+                    ["nome_progetto" => $nome_progetto, "id_profilo" => $id_profilo]
+                );
+
                 header("Location: project-info.php?nome=" . urlencode($nome_progetto));
                 exit;
             }
@@ -300,11 +349,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_candidatura'])) {
         $stmt->execute();
         $stmt->close();
         $conn->next_result();
+
+        scriviLogLocale(
+            "stato_candidatura_aggiornato",
+            $_SESSION['email'] ?? '',
+            "Progetto",
+            ["nome_progetto" => $nome_progetto, "id_candidatura" => $id, "nuovo_stato" => $nuovo_stato]
+        );
+
         header("Location: project-info.php?nome=" . urlencode($nome_progetto));
         exit;
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -316,6 +374,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_candidatura'])) {
 <body>
   <nav class="navbar navbar-light bg-light px-4 shadow-sm mb-4">
     <a class="navbar-brand fw-bold text-primary" href="home.php">BOSTARTER</a>
+    <a href="home.php" class="btn btn-outline-secondary">Torna indietro</a>
   </nav>
 
   <div class="container mt-5" style="padding-bottom: 120px;">
@@ -523,8 +582,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_candidatura'])) {
         <div class="alert alert-warning">Non possiedi le competenze richieste per candidarti a questo progetto.</div>
       <?php endif; ?>
     <?php endif; ?>
-  
-    <a href="home.php" class="btn btn-secondary">Torna alla Home</a>
   </div>
 </body>
 </html>

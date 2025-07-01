@@ -54,7 +54,7 @@ if ($result) {
   <div class="d-flex">
     <?php if (isset($_SESSION['email'])): ?>
       <span class="me-3 align-self-center text-secondary">
-        Benvenuto, <strong><?= htmlspecialchars($_SESSION['utente']['Username']) ?></strong>
+        Gestisci le skil del tuo curriculum e crea nuovi progetti
       </span>
       <form method="POST" class="d-inline me-2 align-self-center">
         <button type="submit" name="logout" class="btn btn-link text-decoration-underline py-1 px-0 align-baseline">Esci</button>
@@ -72,6 +72,11 @@ if ($result) {
     <h1 class="mb-4 text-center text-primary fw-bold">
       Benvenuto, <?= htmlspecialchars($_SESSION['utente']['Username']) ?>
     </h1>
+    <p class="text-center fs-5 px-3">
+      BOSTARTER è la piattaforma dove puoi dare vita alle tue idee o sostenere quelle degli altri. 
+      Crea un progetto hardware o software, imposta un budget, aggiungi ricompense e coinvolgi la community. 
+      Oppure esplora i progetti disponibili e partecipa al loro successo con il tuo contributo!
+    </p>
   <?php endif; ?>
 
   <div class="mb-5">

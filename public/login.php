@@ -5,6 +5,8 @@ error_reporting(E_ALL);
 
 session_start();
 
+require_once 'log-mongo.php';
+
 $host = "localhost";
 $user = "root";
 $pass = "";
@@ -30,17 +32,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["register"])) {
 
     if ($stmt->execute()) {
         $_SESSION['registrazione_successo'] = true;
+
+        // Log registrazione utente riuscita
+        scriviLogLocale(
+            "registrazione_successo",
+            $email,
+            "Utente",
+            ["username" => $username, "nome" => $nome, "cognome" => $cognome]
+        );
+
         header("Location: login.php");
         exit();
     } else {
-        echo "<script>alert('Errore: " . $stmt->error . "');</script>";
+        // Log errore registrazione
+        scriviLogLocale(
+            "registrazione_errore",
+            $email,
+            "Utente",
+            ["username" => $username, "error_msg" => $stmt->error]
+        );
+
+        echo "<script>alert('Errore: " . htmlspecialchars($stmt->error) . "');</script>";
     }
 
     $stmt->close();
     $conn->next_result();
 }
 
-// Login
+// Login utente
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
     $email = $_POST["login_email"];
     $password = $_POST["login_password"];
@@ -54,17 +73,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["login"])) {
         $utente = $result->fetch_assoc();
         $_SESSION['utente'] = $utente;
         $_SESSION['email'] = $utente['Email'];
+
+        // Log login utente riuscito
+        scriviLogLocale(
+            "login_successo",
+            $email,
+            "Utente",
+            ["nome" => $utente['Nome'], "cognome" => $utente['Cognome']]
+        );
+
         header("Location: home.php");
         exit();
     } else {
         $login_error = "Email o password errate, riprovare.";
+
+        // Log login utente fallito
+        scriviLogLocale(
+            "login_fallito",
+            $email,
+            "Utente",
+            ["errore" => $login_error]
+        );
     }
 
     $stmt->close();
     $conn->next_result();
 }
 
-// Admin Login
+// Login admin
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["admin_login"])) {
     $email = $_POST["admin_email"];
     $password = $_POST["admin_password"];
@@ -77,10 +113,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["admin_login"])) {
 
     if ($result && $result->num_rows === 1) {
         $_SESSION['admin_email'] = $email;
+
+        // Log login admin riuscito
+        scriviLogLocale(
+            "admin_login_successo",
+            $email,
+            "Admin",
+            ["codice" => $codice]
+        );
+
         header("Location: admin.php");
         exit();
     } else {
         $admin_error = "Credenziali da amministratore errate.";
+
+        // Log login admin fallito
+        scriviLogLocale(
+            "admin_login_fallito",
+            $email,
+            "Admin",
+            ["errore" => $admin_error]
+        );
     }
 
     $stmt->close();
