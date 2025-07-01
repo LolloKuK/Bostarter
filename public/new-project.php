@@ -71,7 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             ["nome" => $nome, "motivo" => "nome duplicato"]
         );
     } else {
-
+        // Inserimento progetto
         if ($tipo_progetto === "hardware") {
             $stmt = $conn->prepare("CALL sp_inserisci_progetto_hardware(?, ?, ?, ?, ?, ?)");
         } else {
@@ -83,6 +83,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($stmt->execute()) {
             $conn->next_result();
 
+            // Componenti hardware
             if ($tipo_progetto === "hardware" && isset($_POST['componenti_nome'])) {
                 foreach ($_POST['componenti_nome'] as $i => $nome_componente) {
                     $prezzo = $_POST['componenti_prezzo'][$i];
@@ -95,7 +96,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $stmt_comp->close();
                     $conn->next_result();
                 }
-            } elseif ($tipo_progetto === "software" && isset($_POST['profili_nome'])) {
+            } // Profili software
+            elseif ($tipo_progetto === "software" && isset($_POST['profili_nome'])) {
                 foreach ($_POST['profili_nome'] as $i => $nome_profilo) {
                     $competenza = $_POST['profili_competenza'][$i];
                     $livello = $_POST['profili_livello'][$i];
@@ -108,6 +110,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
             }
 
+            // Upload immagini
             $cartella_upload = "images/";
             if (!is_dir($cartella_upload)) {
                 mkdir($cartella_upload, 0777, true);
@@ -138,6 +141,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
             }
 
+            // Reward
             if (isset($_POST['reward_descrizione']) && isset($_FILES['reward_foto'])) {
                 foreach ($_POST['reward_descrizione'] as $i => $descrizione_reward) {
                     $nome_file = basename($_FILES['reward_foto']['name'][$i]);

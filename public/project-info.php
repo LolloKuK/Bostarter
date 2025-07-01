@@ -233,6 +233,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['finanzia'])) {
 $utente_corrente = $_SESSION['email'] ?? '';
 $candidabile = false;
 
+$profili_candidabili = [];
+
 if ($tipo === "software" && $utente_corrente !== '' && $utente_corrente !== $progetto['EmailUtente']) {
     foreach ($profili as $p) {
         $esiste = 0;
@@ -246,8 +248,8 @@ if ($tipo === "software" && $utente_corrente !== '' && $utente_corrente !== $pro
         if ($res) {
             $row = $res->fetch_assoc();
             if ($row['valido'] > 0) {
+                $profili_candidabili[] = $p;
                 $candidabile = true;
-                break;
             }
         }
     }
@@ -569,7 +571,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_candidatura'])) {
           <div class="mb-3">
             <label for="profilo" class="form-label">Seleziona un profilo</label>
             <select name="profilo" id="profilo" class="form-select" required>
-              <?php foreach ($profili as $p): ?>
+              <?php foreach ($profili_candidabili as $p): ?>
                 <option value="<?= htmlspecialchars($p['Id']) ?>">
                     <?= htmlspecialchars($p['Nome']) ?> - <?= htmlspecialchars($p['Competenza']) ?> (Livello <?= $p['Livello'] ?>)
                 </option>
