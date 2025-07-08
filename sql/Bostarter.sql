@@ -29,13 +29,13 @@ CREATE TABLE SkillUtente (
 );
 
 CREATE TABLE Amministratore(
-	EmailUtenteAmministratore VARCHAR(20) PRIMARY KEY,
+	EmailUtenteAmministratore VARCHAR(50) PRIMARY KEY,
     CodiceSicurezza INT,
     foreign key (EmailUtenteAmministratore) references Utente(Email)
     );
 
 CREATE TABLE Creatore(
-	EmailUtenteCreatore VARCHAR(20) PRIMARY KEY,
+	EmailUtenteCreatore VARCHAR(50) PRIMARY KEY,
     NrProgetti INT,
     Affidabilità INT DEFAULT 0,
 	foreign key (EmailUtenteCreatore) references Utente(Email)
@@ -44,7 +44,7 @@ CREATE TABLE Creatore(
 CREATE TABLE Progetto(
 	Nome VARCHAR (20) PRIMARY KEY,
     DataInserimento DATE,
-    Budget INt,
+    Budget INT,
     Descrizione VARCHAR(255),
     Stato ENUM('aperto', 'chiuso'),
     DataLimite DATE,
